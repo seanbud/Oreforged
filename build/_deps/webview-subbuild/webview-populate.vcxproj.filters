@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\Sean\Documents\GitHub\Oreforged\build\_deps\webview-subbuild\CMakeFiles\651d1a20f0637e37abfe356aeea5fb84\webview-populate-mkdir.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Sean\Documents\GitHub\Oreforged\build\_deps\webview-subbuild\CMakeFiles\651d1a20f0637e37abfe356aeea5fb84\webview-populate-download.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Sean\Documents\GitHub\Oreforged\build\_deps\webview-subbuild\CMakeFiles\651d1a20f0637e37abfe356aeea5fb84\webview-populate-update.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Sean\Documents\GitHub\Oreforged\build\_deps\webview-subbuild\CMakeFiles\651d1a20f0637e37abfe356aeea5fb84\webview-populate-patch.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Sean\Documents\GitHub\Oreforged\build\_deps\webview-subbuild\CMakeFiles\651d1a20f0637e37abfe356aeea5fb84\webview-populate-configure.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Sean\Documents\GitHub\Oreforged\build\_deps\webview-subbuild\CMakeFiles\651d1a20f0637e37abfe356aeea5fb84\webview-populate-build.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Sean\Documents\GitHub\Oreforged\build\_deps\webview-subbuild\CMakeFiles\651d1a20f0637e37abfe356aeea5fb84\webview-populate-install.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Sean\Documents\GitHub\Oreforged\build\_deps\webview-subbuild\CMakeFiles\651d1a20f0637e37abfe356aeea5fb84\webview-populate-test.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Sean\Documents\GitHub\Oreforged\build\_deps\webview-subbuild\CMakeFiles\92715a98e511a797daadbcab86f7ed7d\webview-populate-complete.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Sean\Documents\GitHub\Oreforged\build\_deps\webview-subbuild\CMakeFiles\da719581589dfbb3e827305b629af3a7\webview-populate.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\Users\Sean\Documents\GitHub\Oreforged\build\_deps\webview-subbuild\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="C:\Users\Sean\Documents\GitHub\Oreforged\build\_deps\webview-subbuild\CMakeFiles\webview-populate" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{9E05B511-0436-301C-AD07-39965F6DAEE6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

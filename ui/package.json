@@ -1,0 +1,24 @@
+{
+  "name": "ore-forged-ui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build && node inline-build.cjs",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@react-facet/core": "^18.4.0",
+    "@react-facet/dom-fiber": "^18.4.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.0"
+  }
+}

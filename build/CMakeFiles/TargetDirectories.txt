@@ -1,0 +1,7 @@
+C:/Users/Sean/Documents/GitHub/Oreforged/build/CMakeFiles/OreForged.dir
+C:/Users/Sean/Documents/GitHub/Oreforged/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/Sean/Documents/GitHub/Oreforged/build/CMakeFiles/ZERO_CHECK.dir
+C:/Users/Sean/Documents/GitHub/Oreforged/build/_deps/webview-build/CMakeFiles/ALL_BUILD.dir
+C:/Users/Sean/Documents/GitHub/Oreforged/build/_deps/webview-build/core/CMakeFiles/webview_core_shared.dir
+C:/Users/Sean/Documents/GitHub/Oreforged/build/_deps/webview-build/core/CMakeFiles/webview_core_static.dir
+C:/Users/Sean/Documents/GitHub/Oreforged/build/_deps/json-build/CMakeFiles/ALL_BUILD.dir

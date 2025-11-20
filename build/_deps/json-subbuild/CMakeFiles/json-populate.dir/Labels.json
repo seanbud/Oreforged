@@ -1,0 +1,46 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "C:/Users/Sean/Documents/GitHub/Oreforged/build/_deps/json-subbuild/CMakeFiles/json-populate"
+		},
+		{
+			"file" : "C:/Users/Sean/Documents/GitHub/Oreforged/build/_deps/json-subbuild/CMakeFiles/51c6dddde9e453783e6cd92ad99609be/json-populate.rule"
+		},
+		{
+			"file" : "C:/Users/Sean/Documents/GitHub/Oreforged/build/_deps/json-subbuild/CMakeFiles/f45e02828a9230d8a4ec8bb1ab3a78ff/json-populate-complete.rule"
+		},
+		{
+			"file" : "C:/Users/Sean/Documents/GitHub/Oreforged/build/_deps/json-subbuild/CMakeFiles/797f099efaed95690f404d4ae77bc3be/json-populate-build.rule"
+		},
+		{
+			"file" : "C:/Users/Sean/Documents/GitHub/Oreforged/build/_deps/json-subbuild/CMakeFiles/797f099efaed95690f404d4ae77bc3be/json-populate-configure.rule"
+		},
+		{
+			"file" : "C:/Users/Sean/Documents/GitHub/Oreforged/build/_deps/json-subbuild/CMakeFiles/797f099efaed95690f404d4ae77bc3be/json-populate-download.rule"
+		},
+		{
+			"file" : "C:/Users/Sean/Documents/GitHub/Oreforged/build/_deps/json-subbuild/CMakeFiles/797f099efaed95690f404d4ae77bc3be/json-populate-install.rule"
+		},
+		{
+			"file" : "C:/Users/Sean/Documents/GitHub/Oreforged/build/_deps/json-subbuild/CMakeFiles/797f099efaed95690f404d4ae77bc3be/json-populate-mkdir.rule"
+		},
+		{
+			"file" : "C:/Users/Sean/Documents/GitHub/Oreforged/build/_deps/json-subbuild/CMakeFiles/797f099efaed95690f404d4ae77bc3be/json-populate-patch.rule"
+		},
+		{
+			"file" : "C:/Users/Sean/Documents/GitHub/Oreforged/build/_deps/json-subbuild/CMakeFiles/797f099efaed95690f404d4ae77bc3be/json-populate-test.rule"
+		},
+		{
+			"file" : "C:/Users/Sean/Documents/GitHub/Oreforged/build/_deps/json-subbuild/CMakeFiles/797f099efaed95690f404d4ae77bc3be/json-populate-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"json-populate"
+		],
+		"name" : "json-populate"
+	}
+}

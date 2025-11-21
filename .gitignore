@@ -1,0 +1,23 @@
+# Build directories
+build/
+out/
+bin/
+dist/
+
+# Dependencies
+node_modules/
+ui/node_modules/
+
+# IDEs
+.vscode/
+.idea/
+*.sln
+*.vcxproj
+*.vcxproj.user
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local config
+.env

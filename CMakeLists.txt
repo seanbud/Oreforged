@@ -28,7 +28,12 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(json)
 
 # Main executable
-add_executable(OreForged src/main.cpp)
+add_executable(OreForged 
+    src/main.cpp
+    src/Game.cpp
+    src/Game.h
+)
+
 
 # Link libraries
 target_link_libraries(OreForged PRIVATE webview::static nlohmann_json::nlohmann_json)

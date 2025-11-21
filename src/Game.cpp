@@ -1,0 +1,113 @@
+#include "Game.h"
+#include "webview.h"
+#include <iostream>
+#include <filesystem>
+#include <algorithm>
+#include <Windows.h>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
+
+struct WebviewWrapper {
+    webview::webview w;
+    WebviewWrapper(bool debug, void* window) : w(debug, window) {}
+};
+
+Game::Game() {
+    InitUI();
+}
+
+Game::~Game() = default;
+
+void Game::InitUI() {
+    // Initialize webview with debug enabled
+    m_webview = std::make_unique<WebviewWrapper>(true, nullptr);
+    m_webview->w.set_title("OreForged");
+    m_webview->w.set_size(1280, 720, WEBVIEW_HINT_NONE);
+
+    // Bind a C++ function to be called from JS
+    m_webview->w.bind("logFromUI", [&](std::string seq, std::string req, void* /*arg*/) {
+        std::cout << "UI Log: " << req << std::endl;
+        m_webview->w.resolve(seq, 0, "Logged successfully");
+    }, nullptr);
+
+    m_webview->w.bind("updateState", [&](std::string seq, std::string req, void* /*arg*/) {
+        try {
+            auto args = json::parse(req);
+            if (args.is_array() && args.size() >= 2) {
+                std::string key = args[0];
+                if (key == "renderDistance") {
+                    m_state.renderDistance = args[1];
+                    std::cout << "Updated Render Distance: " << m_state.renderDistance << std::endl;
+                }
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "JSON Parse Error: " << e.what() << std::endl;
+        }
+        m_webview->w.resolve(seq, 0, "OK");
+    }, nullptr);
+
+    // Point to local file relative to executable
+    char path[MAX_PATH];
+    GetModuleFileNameA(NULL, path, MAX_PATH);
+    std::filesystem::path exePath(path);
+    auto exeDir = exePath.parent_path();
+    auto htmlPath = exeDir / "ui" / "index.html";
+    
+    // Convert to string and replace backslashes with forward slashes for file:// URL
+    std::string htmlPathStr = htmlPath.string();
+    std::replace(htmlPathStr.begin(), htmlPathStr.end(), '\\', '/');
+    m_webview->w.navigate("file:///" + htmlPathStr);
+}
+
+void Game::Run() {
+    m_isRunning = true;
+    m_gameLoopThread = std::thread(&Game::GameLoop, this);
+
+    if (m_webview) {
+        m_webview->w.run();
+    }
+
+    // Webview has closed, signal game loop to stop
+    m_isRunning = false;
+    if (m_gameLoopThread.joinable()) {
+        m_gameLoopThread.join();
+    }
+}
+
+void Game::GameLoop() {
+    using clock = std::chrono::high_resolution_clock;
+    auto next_tick = clock::now();
+    const auto tick_rate = std::chrono::milliseconds(1000 / 60); // 60 TPS
+
+    while (m_isRunning) {
+        Update();
+        
+        next_tick += tick_rate;
+        std::this_thread::sleep_until(next_tick);
+    }
+}
+
+void Game::Update() {
+    m_state.tickCount++;
+    
+    // Update UI every tick (or less frequently if needed)
+    // For now, send tick count every tick to test performance
+    UpdateFacet("tick_count", std::to_string(m_state.tickCount));
+
+    // Simple debug output every 60 ticks
+    if (m_state.tickCount % 60 == 0) {
+        std::cout << "Tick: " << m_state.tickCount << std::endl;
+    }
+}
+
+void Game::UpdateFacet(const std::string& id, const std::string& value) {
+    if (!m_webview) return;
+
+    // Dispatch to UI thread
+    m_webview->w.dispatch([=]() {
+        if (!m_webview) return; // Safety check
+        std::string script = "if(window.OreForged && window.OreForged.updateFacet) window.OreForged.updateFacet('" + id + "', " + value + ");";
+        m_webview->w.eval(script);
+    });
+}

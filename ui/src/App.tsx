@@ -1,86 +1,93 @@
-import { useState, useEffect } from 'react'
-import Button from './components/Button'
+import { useState } from 'react'
 import Panel from './components/Panel'
 import Toggle from './components/Toggle'
 import Input from './components/Input'
 import Slider from './components/Slider'
-import { Colors } from './design/tokens'
+import Button from './components/Button'
+import { remoteFacet } from './engine/hooks'
+import { FastDiv } from './engine/components'
+import { useFacetMap } from '@react-facet/core'
+import { updateGame } from './engine/bridge'
+
+const tickCountFacet = remoteFacet<number>('tick_count', 0);
 
 function App() {
-    const [toggleState, setToggleState] = useState(false);
-    const [inputValue, setInputValue] = useState('');
-    const [sliderValue, setSliderValue] = useState(50);
-    const [log, setLog] = useState<string[]>([]);
+    const [toggleValue, setToggleValue] = useState(false)
+    const [inputValue, setInputValue] = useState('Hello OreUI')
+    const [sliderValue, setSliderValue] = useState(50)
 
-    useEffect(() => {
-        console.log("OreUI App Mounted");
-    }, []);
+    const handleToggle = (val: boolean) => {
+        setToggleValue(val)
+        console.log("Toggle:", val)
+    }
 
-    const handleLog = (msg: string) => {
-        setLog(prev => [...prev, msg].slice(-5)); // Keep last 5 logs
-        console.log(msg); // Also log to console for C++ forwarding
-    };
+    const tickStyle = useFacetMap(tick => ({
+        width: '50px',
+        height: '50px',
+        backgroundColor: '#E60F58',
+        transform: `translateX(${tick % 300}px) rotate(${tick * 5}deg)`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontWeight: 'bold',
+        borderRadius: '4px',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
+    }), [], [tickCountFacet]);
 
     return (
         <div style={{
             width: '100vw',
             height: '100vh',
-            backgroundColor: Colors.Black, // Dark background for contrast
+            backgroundColor: '#1e1e1e',
             display: 'flex',
-            justifyContent: 'center',
             alignItems: 'center',
-            padding: '20px',
-            boxSizing: 'border-box'
+            justifyContent: 'center'
         }}>
-            <Panel style={{ width: '400px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <h1 style={{ margin: 0, textAlign: 'center', fontSize: '1.5rem', textShadow: '2px 2px 0px #000' }}>
-                    OreUI Components
-                </h1>
+            <Panel style={{ width: '400px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <h1 style={{ margin: 0, textAlign: 'center', color: '#fff', fontSize: '1.2rem' }}>OreUI Component Showcase</h1>
 
-                {/* Toggles */}
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ border: '1px solid #444', padding: '20px', borderRadius: '4px', backgroundColor: '#252526' }}>
+                        <div style={{ marginBottom: '10px', color: '#aaa', fontSize: '0.9rem' }}>C++ Data Binding (60 TPS)</div>
+                        <div style={{ height: '60px', position: 'relative', overflow: 'hidden', backgroundColor: '#1e1e1e', borderRadius: '4px' }}>
+                            <FastDiv style={tickStyle}>
+                                {/* Visual box */}
+                            </FastDiv>
+                        </div>
+                    </div>
+
                     <Toggle
-                        checked={toggleState}
-                        onChange={(v) => { setToggleState(v); handleLog(`Toggle: ${v}`); }}
-                        label="Enable Power"
+                        label="Enable Feature"
+                        checked={toggleValue}
+                        onChange={handleToggle}
                     />
-                    <Toggle checked={true} onChange={() => { }} label="Always On" />
-                </div>
 
-                {/* Inputs */}
-                <Input
-                    label="World Name"
-                    placeholder="New World"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                />
+                    <Input
+                        placeholder="Type something..."
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                    />
 
-                {/* Sliders */}
-                <Slider
-                    label="Render Distance"
-                    min={2}
-                    max={32}
-                    value={sliderValue}
-                    onChange={(v) => setSliderValue(v)}
-                />
+                    <Slider
+                        min={0}
+                        max={100}
+                        value={sliderValue}
+                        onChange={(v) => {
+                            setSliderValue(v);
+                            updateGame('renderDistance', v);
+                        }}
+                    />
 
-                {/* Buttons */}
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <Button onClick={() => handleLog(`Input: ${inputValue}`)}>Save World</Button>
-                    <Button onClick={() => handleLog('Cancelled')} style={{ filter: 'grayscale(100%)' }}>Cancel</Button>
-                </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <Button variant="green" onClick={() => console.log("Primary Clicked")}>
+                            Primary
+                        </Button>
+                        <Button variant="red" onClick={() => console.log("Secondary Clicked")}>
+                            Secondary
+                        </Button>
+                    </div>
 
-                {/* Log Output */}
-                <div style={{
-                    backgroundColor: '#000',
-                    padding: '10px',
-                    fontFamily: 'monospace',
-                    fontSize: '0.8rem',
-                    color: '#aaa',
-                    minHeight: '80px'
-                }}>
-                    {log.map((l, i) => <div key={i}>&gt; {l}</div>)}
-                    {log.length === 0 && <div>&gt; Ready...</div>}
                 </div>
             </Panel>
         </div>

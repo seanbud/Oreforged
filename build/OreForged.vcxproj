@@ -429,6 +429,8 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\main.cpp" />
+    <ClCompile Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\Game.cpp" />
+    <ClInclude Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\Game.h" />
     <Natvis Include="C:\Users\Sean\Documents\GitHub\Oreforged\build\_deps\json-src\nlohmann_json.natvis">
     </Natvis>
   </ItemGroup>

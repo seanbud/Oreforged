@@ -4,6 +4,14 @@
     <ClCompile Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\Game.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\Game.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="C:\Users\Sean\Documents\GitHub\Oreforged\CMakeLists.txt" />
@@ -12,6 +20,9 @@
     <Natvis Include="C:\Users\Sean\Documents\GitHub\Oreforged\build\_deps\json-src\nlohmann_json.natvis" />
   </ItemGroup>
   <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{956EAFB8-1E98-3D74-A71D-7CEB80FF84F2}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source Files">
       <UniqueIdentifier>{FD158529-3EFE-3C66-981E-7D4F5DA6683E}</UniqueIdentifier>
     </Filter>

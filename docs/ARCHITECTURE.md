@@ -1,13 +1,3 @@
-# OreForged Architecture
-
-## System Overview
-
-OreForged is a hybrid C++/JavaScript application that combines:
-- **C++ Game Engine**: High-performance game loop and logic
-- **Chromium WebView**: Embedded browser for UI rendering
-- **React + OreUI**: Facet-based UI framework
-
-![System Architecture](images/architecture.png)
 
 ## Layer Breakdown
 
@@ -215,19 +205,6 @@ Oreforged/
 ## Dependencies
 
 ### C++
-- **webview**: Cross-platform webview library
-- **nlohmann/json**: JSON parsing
-- **CMake**: Build system
-
-### JavaScript
-- **React**: UI framework
-- **@react-facet/core**: Facet library
-- **@react-facet/dom-fiber**: Fast components
-- **Vite**: Build tool
-- **TypeScript**: Type safety
-
-## Performance Characteristics
-
 | Operation | Frequency | Overhead |
 |-----------|-----------|----------|
 | Game Loop | 60 TPS | ~16ms budget |

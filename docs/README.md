@@ -1,13 +1,17 @@
 # OreForged Documentation
 
+<p align="center">
+  <img src="images/banner.png" alt="OreForged" width="300">
+</p>
+
 Welcome to the OreForged documentation! This guide will help you understand and use the OreUI framework.
 
 ## Quick Links
 
-- **[OreUI Guide](OREUI.md)** - Learn the Facet-based UI pattern
-- **[Data Binding](DATA_BINDING.md)** - C++ ↔ JavaScript communication
-- **[Component Library](COMPONENTS.md)** - Available UI components
 - **[Architecture](ARCHITECTURE.md)** - System design and structure
+- **[Data Binding](DATA_BINDING.md)** - C++ ↔ JavaScript communication
+- **[OreUI Guide](OREUI.md)** - Learn the Facet-based UI pattern
+- **[Component Library](COMPONENTS.md)** - Available UI components
 
 ## What is OreForged?
 

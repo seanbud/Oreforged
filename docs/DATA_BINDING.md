@@ -1,14 +1,3 @@
-# Data Binding: C++ ↔ JavaScript Communication
-
-## Overview
-
-OreForged uses a bidirectional data binding system that allows:
-- **C++ → UI**: Game state updates pushed to React at 60 TPS
-- **UI → C++**: User interactions sent back to game logic
-
-## Architecture
-
-![Data Flow Diagram](images/data_flow.png)
 
 **C++ → UI Flow**:
 1. Game loop calls `UpdateFacet()`
@@ -307,17 +296,5 @@ function PerformanceMonitor() {
 - Handle errors gracefully on both sides
 - Use appropriate update frequencies
 - Validate data before sending to C++
-
-### ❌ Don't
-
-- Send updates faster than necessary
-- Forget to handle JSON parsing errors
-- Mix Facets with traditional state for the same data
-- Send large objects every frame
-- Ignore type safety
-
-## Next Steps
-
-- [OreUI Guide](OREUI.md) - Learn the Facet pattern
 - [Component Library](COMPONENTS.md) - Use pre-built components
 - [Architecture](ARCHITECTURE.md) - Understand the system

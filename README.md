@@ -1,6 +1,8 @@
 # OreForged
 
-![OreForged Logo](docs/images/logo.png)
+<p align="center">
+  <img src="docs/images/banner.png" alt="OreForged" width="300">
+</p>
 
 > A high-performance C++ game engine demo showcasing **OreUI** - a React-based UI library inspired by Mojang's Bedrock Edition UI architecture.
 
@@ -47,17 +49,29 @@ build\bin\Release\OreForged.exe
 
 ## 📚 Documentation
 
-- **[OreUI Guide](docs/OREUI.md)** - Understanding the Facet-based UI system
-- **[Data Binding](docs/DATA_BINDING.md)** - How C++ and JavaScript communicate
-- **[Component Library](docs/COMPONENTS.md)** - Using OreUI components
 - **[Architecture](docs/ARCHITECTURE.md)** - System design and patterns
+- **[Data Binding](docs/DATA_BINDING.md)** - How C++ and JavaScript communicate
+- **[OreUI Guide](docs/OREUI.md)** - Understanding the Facet-based UI system
+- **[Component Library](docs/COMPONENTS.md)** - Using OreUI components
+
+## 🏗️ Architecture
+
+<p align="center">
+  <img src="docs/images/architecture.png" alt="Architecture" width="500">
+</p>
+
+The system consists of four main layers:
+1. **C++ Game Loop** - Runs at 60 TPS, manages game state
+2. **WebView Bridge** - Chromium-based bridge between C++ and JavaScript
+3. **FacetManager** - Central state management for UI updates
+4. **React UI** - Component-based interface with direct DOM updates
 
 ## 🎨 OreUI Philosophy
 
 OreUI follows three core principles inspired by Mojang's Bedrock UI:
 
 ### 1. **Facets All The Way Down**
-Pass `Facet<T>` objects through your component tree instead of unwrapping values. This allows child components to subscribe directly to changes.
+Pass `Facet<T>` objects through your component tree instead of unwrapping values.
 
 ```tsx
 // ✅ Good - Pass the Facet
@@ -70,7 +84,7 @@ return <HealthBar health={health} />;
 ```
 
 ### 2. **Direct DOM Updates**
-Use `fast-` components that update the DOM directly when Facets change, avoiding React's reconciliation.
+Use `fast-` components that update the DOM directly when Facets change.
 
 ```tsx
 const tickStyle = useFacetMap(tick => ({
@@ -82,10 +96,6 @@ const tickStyle = useFacetMap(tick => ({
 
 ### 3. **Minimal React Surface Area**
 Keep React for structure and event handling. Use Facets for all dynamic data.
-
-## 🏗️ Architecture
-
-![Architecture Diagram](docs/images/architecture.png)
 
 ## 🧩 Component Showcase
 

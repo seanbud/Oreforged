@@ -1,13 +1,3 @@
-# OreUI: High-Performance Game UI with Facets
-
-## What is OreUI?
-
-OreUI is a React-based UI library designed for game engines, inspired by Mojang's Bedrock Edition UI architecture. It achieves **zero React re-renders** for dynamic data by using the **Facet pattern**.
-
-## The Problem with Traditional React
-
-In a typical game UI, you might have:
-
 ```tsx
 function HealthBar() {
     const [health, setHealth] = useState(100);
@@ -26,7 +16,9 @@ function HealthBar() {
 
 **Problem**: Every health update triggers a full React reconciliation, even though only the `width` style changed.
 
-![Facet Pattern Comparison](images/facet_pattern.png)
+<p align="center">
+  <img src="images/facet_pattern.png" alt="Facet Pattern" width="600">
+</p>
 
 ## The OreUI Solution: Facets
 

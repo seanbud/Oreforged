@@ -1,11 +1,3 @@
-# OreUI Component Library
-
-A collection of Minecraft-styled UI components built with the Facet pattern for maximum performance.
-
-## Design Tokens
-
-All components use centralized design tokens for consistent styling:
-
 ```typescript
 // ui/src/design/tokens.ts
 export const Colors = {

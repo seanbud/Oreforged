@@ -7,6 +7,7 @@ dist/
 # Dependencies
 node_modules/
 ui/node_modules/
+ui/dist/
 
 # IDEs
 .vscode/
@@ -14,6 +15,7 @@ ui/node_modules/
 *.sln
 *.vcxproj
 *.vcxproj.user
+*.vcxproj.filters
 
 # OS
 .DS_Store
@@ -21,3 +23,10 @@ Thumbs.db
 
 # Local config
 .env
+
+# Compiled files
+*.obj
+*.exe
+*.dll
+*.lib
+*.pdb

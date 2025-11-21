@@ -24,5 +24,24 @@ export const FastDiv: React.FC<FastDivProps> = ({ style, ...props }) => {
         }
     }, [style]);
 
-    return <div ref={ ref } {...props } />;
+    return <div ref={ref} {...props} />;
+};
+
+interface FastLabelProps extends React.HTMLAttributes<HTMLSpanElement> {
+    text: Facet<string | number>;
+}
+
+export const FastLabel: React.FC<FastLabelProps> = ({ text, ...props }) => {
+    const ref = useRef<HTMLSpanElement>(null);
+
+    useEffect(() => {
+        if (!ref.current) return;
+        return text.observe(value => {
+            if (ref.current) {
+                ref.current.textContent = String(value);
+            }
+        });
+    }, [text]);
+
+    return <span ref={ref} {...props} />;
 };

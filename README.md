@@ -60,6 +60,44 @@ build\bin\Release\OreForged.exe
 
 ## 🏗️ Architecture
 
+```mermaid
+graph TB
+    subgraph "C++ Game Engine"
+        GL[Game Loop<br/>60 TPS]
+        W[World]
+        C[Chunks 3x3]
+        GL --> W
+        W --> C
+    end
+    
+    subgraph "Data Bridge"
+        F[Facet: chunk_data]
+        GL -->|UpdateFacetJSON| F
+    end
+    
+    subgraph "JavaScript/Three.js"
+        VR[VoxelRenderer]
+        CM[ChunkMesh]
+        S[Three.js Scene]
+        F -->|observe| VR
+        VR --> CM
+        CM --> S
+    end
+    
+    style GL fill:#4caf50
+    style F fill:#ff9800
+    style S fill:#2196f3
+```
+
+### Data Flow & Facets
+OreForged uses a **reactive data-binding system** inspired by Mojang's data-driven UI philosophy. The core concept is the **Facet**, which acts as a bridge between the C++ game logic and the React UI.
+
+1.  **C++ Updates**: The game loop generates data (e.g., chunks, player position) and sends it to the UI thread via `UpdateFacet` or `UpdateFacetJSON`.
+2.  **Facet System**: The `bridge.ts` layer receives this data and updates the corresponding Facet.
+3.  **Reactive UI**: Components like `VoxelRenderer` observe these Facets. When data changes, the component reacts immediately without requiring a full React tree re-render.
+
+**Why Facets for Chunks?**
+Using Facets for chunk data allows for efficient, event-driven updates. Instead of the UI polling for world state, it reacts only when a chunk is generated or modified. This keeps the rendering loop decoupled from the game logic loop, ensuring smooth performance even when world generation is heavy.
 <p align="center">
   <img src="docs/images/architecture.png" alt="Architecture" width="500">
 </p>
@@ -68,10 +106,10 @@ build\bin\Release\OreForged.exe
 
 The system consists of four main layers:
 
-1. **C++ Game Loop** - Runs at 60 TPS, manages game state
-2. **WebView Bridge** - Chromium-based bridge between C++ and JavaScript
-3. **FacetManager** - Central state management for UI updates
-4. **React UI** - Component-based interface with direct DOM updates
+1.  **C++ Game Loop** - Runs at 60 TPS, manages game state
+2.  **WebView Bridge** - Chromium-based bridge between C++ and JavaScript
+3.  **FacetManager** - Central state management for UI updates
+4.  **React UI** - Component-based interface with direct DOM updates
 
 <p align="center">
   <img src="docs/images/data_flow.png" alt="Data Flow" width="500">

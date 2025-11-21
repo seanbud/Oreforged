@@ -32,6 +32,11 @@ add_executable(OreForged
     src/main.cpp
     src/Game.cpp
     src/Game.h
+    src/world/Block.h
+    src/world/Chunk.h
+    src/world/Chunk.cpp
+    src/world/World.h
+    src/world/World.cpp
 )
 
 

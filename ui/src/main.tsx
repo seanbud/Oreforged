@@ -27,9 +27,12 @@ console.log = (...args) => {
 const originalError = console.error;
 console.error = (...args) => {
     originalError(...args);
-    const msg = "[ERROR] " + args.map(arg =>
-        typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-    ).join(' ');
+    const msg = "[ERROR] " + args.map(arg => {
+        if (arg instanceof Error) {
+            return arg.message + '\n' + arg.stack;
+        }
+        return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
+    }).join(' ');
 
     if (window.logFromUI) {
         window.logFromUI("0", msg);

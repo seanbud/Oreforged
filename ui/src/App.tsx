@@ -1,97 +1,109 @@
-import { useState } from 'react'
-import Panel from './components/Panel'
-import Toggle from './components/Toggle'
-import Input from './components/Input'
-import Slider from './components/Slider'
-import Button from './components/Button'
-import { remoteFacet } from './engine/hooks'
-import { FastDiv } from './engine/components'
-import { useFacetMap } from '@react-facet/core'
-import { updateGame } from './engine/bridge'
+import { useEffect, useState } from 'react';
+import { VoxelRenderer } from './game/VoxelRenderer';
+import Panel from './components/Panel';
+import { remoteFacet } from './engine/hooks';
+import { useFacetMap } from '@react-facet/core';
+import { FastLabel } from './engine/components';
+
+declare global {
+    interface Window {
+        uiReady?: () => void;
+    }
+}
 
 const tickCountFacet = remoteFacet<number>('tick_count', 0);
 
 function App() {
-    const [toggleValue, setToggleValue] = useState(false)
-    const [inputValue, setInputValue] = useState('Hello OreUI')
-    const [sliderValue, setSliderValue] = useState(50)
+    const tickText = useFacetMap(tick => `Tick: ${tick}`, [], [tickCountFacet]);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-    const handleToggle = (val: boolean) => {
-        setToggleValue(val)
-        console.log("Toggle:", val)
-    }
+    useEffect(() => {
+        console.log("App mounted, checking uiReady");
+        // Signal C++ that UI is ready to receive data
+        if (window.uiReady) {
+            console.log("Calling uiReady");
+            window.uiReady();
+        } else {
+            console.error("uiReady not defined on window object");
+            console.log("Window keys:", Object.keys(window));
+        }
 
-    const tickStyle = useFacetMap(tick => ({
-        width: '50px',
-        height: '50px',
-        backgroundColor: '#E60F58',
-        transform: `translateX(${tick % 300}px) rotate(${tick * 5}deg)`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        fontWeight: 'bold',
-        borderRadius: '4px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
-    }), [], [tickCountFacet]);
+        // Input listener for ESC
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setIsMenuOpen(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     return (
-        <div style={{
-            width: '100vw',
-            height: '100vh',
-            backgroundColor: '#1e1e1e',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-        }}>
-            <Panel style={{ width: '400px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <h1 style={{ margin: 0, textAlign: 'center', color: '#fff', fontSize: '1.2rem' }}>OreUI Component Showcase</h1>
+        <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+            {/* 3D Voxel World */}
+            <VoxelRenderer />
 
-                    <div style={{ border: '1px solid #444', padding: '20px', borderRadius: '4px', backgroundColor: '#252526' }}>
-                        <div style={{ marginBottom: '10px', color: '#aaa', fontSize: '0.9rem' }}>C++ Data Binding (60 TPS)</div>
-                        <div style={{ height: '60px', position: 'relative', overflow: 'hidden', backgroundColor: '#1e1e1e', borderRadius: '4px' }}>
-                            <FastDiv style={tickStyle}>
-                                {/* Visual box */}
-                            </FastDiv>
+            {/* UI Overlay */}
+            <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                pointerEvents: 'none', // Allow clicks to pass through to 3D scene
+            }}>
+                {/* Top-left debug panel */}
+                <div style={{
+                    position: 'absolute',
+                    top: '20px',
+                    left: '20px',
+                    pointerEvents: 'auto', // Re-enable pointer events for this panel
+                }}>
+                    <Panel style={{ padding: '12px', minWidth: '200px' }}>
+                        <div style={{ color: '#fff', fontSize: '14px' }}>
+                            <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>OreForged</div>
+                            <div style={{ color: '#aaa' }}>
+                                <FastLabel text={tickText} />
+                            </div>
+                            <div style={{ color: '#aaa', marginTop: '4px', fontSize: '12px' }}>
+                                Press ESC for menu
+                            </div>
                         </div>
-                    </div>
-
-                    <Toggle
-                        label="Enable Feature"
-                        checked={toggleValue}
-                        onChange={handleToggle}
-                    />
-
-                    <Input
-                        placeholder="Type something..."
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                    />
-
-                    <Slider
-                        min={0}
-                        max={100}
-                        value={sliderValue}
-                        onChange={(v) => {
-                            setSliderValue(v);
-                            updateGame('renderDistance', v);
-                        }}
-                    />
-
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <Button variant="green" onClick={() => console.log("Primary Clicked")}>
-                            Primary
-                        </Button>
-                        <Button variant="red" onClick={() => console.log("Secondary Clicked")}>
-                            Secondary
-                        </Button>
-                    </div>
-
+                    </Panel>
                 </div>
-            </Panel>
+            </div>
+
+            {/* Menu Overlay */}
+            {isMenuOpen && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 100
+                }}>
+                    <Panel style={{ padding: '20px', minWidth: '300px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <h2 style={{ color: 'white', margin: '0 0 20px 0', textAlign: 'center' }}>Game Menu</h2>
+                            <button
+                                style={{ padding: '10px', cursor: 'pointer', fontSize: '16px' }}
+                                onClick={() => setIsMenuOpen(false)}
+                            >
+                                Resume Game
+                            </button>
+                            <button style={{ padding: '10px', cursor: 'pointer', fontSize: '16px' }}>Settings</button>
+                            <button style={{ padding: '10px', cursor: 'pointer', fontSize: '16px' }}>Quit</button>
+                        </div>
+                    </Panel>
+                </div>
+            )}
         </div>
-    )
+    );
 }
 
-export default App
+export default App;

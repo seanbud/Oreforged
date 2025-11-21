@@ -1,6 +1,6 @@
 # OreForged Documentation
 
-<p align="center">
+<p align="left">
   <img src="images/banner.png" alt="OreForged" width="300">
 </p>
 
@@ -8,10 +8,10 @@ Welcome to the OreForged documentation! This guide will help you understand and 
 
 ## Quick Links
 
-- **[Architecture](ARCHITECTURE.md)** - System design and structure
-- **[Data Binding](DATA_BINDING.md)** - C++ ↔ JavaScript communication
-- **[OreUI Guide](OREUI.md)** - Learn the Facet-based UI pattern
-- **[Component Library](COMPONENTS.md)** - Available UI components
+-   **[Architecture](ARCHITECTURE.md)** - System design and structure
+-   **[Data Binding](DATA_BINDING.md)** - C++ ↔ JavaScript communication
+-   **[OreUI Guide](OREUI.md)** - Learn the Facet-based UI pattern
+-   **[Component Library](COMPONENTS.md)** - Available UI components
 
 ## What is OreForged?
 
@@ -19,10 +19,10 @@ OreForged is a high-performance C++ game engine demo that showcases **OreUI** - 
 
 ### Key Features
 
-- **Zero React Re-renders**: Direct DOM updates via Facets
-- **60 TPS Game Loop**: Smooth C++ game logic
-- **Two-Way Data Binding**: Efficient C++ ↔ JS communication
-- **Type-Safe**: Full TypeScript support
+-   **Zero React Re-renders**: Direct DOM updates via Facets
+-   **60 TPS Game Loop**: Smooth C++ game logic
+-   **Two-Way Data Binding**: Efficient C++ ↔ JS communication
+-   **Type-Safe**: Full TypeScript support
 
 ## Getting Started
 
@@ -37,15 +37,15 @@ cd Oreforged
 ### Your First Component
 
 ```tsx
-import { remoteFacet } from './engine/hooks';
-import { FastDiv } from './engine/components';
-import { useFacetMap } from '@react-facet/core';
+import { remoteFacet } from "./engine/hooks";
+import { FastDiv } from "./engine/components";
+import { useFacetMap } from "@react-facet/core";
 
 function HealthBar() {
-    const health = remoteFacet<number>('player_health', 100);
-    const width = useFacetMap(h => `${h}%`, [], [health]);
-    
-    return <FastDiv style={{ width }} />;
+	const health = remoteFacet<number>("player_health", 100);
+	const width = useFacetMap((h) => `${h}%`, [], [health]);
+
+	return <FastDiv style={{ width }} />;
 }
 ```
 
@@ -56,7 +56,7 @@ function HealthBar() {
 Facets are observable values that can be updated without triggering React re-renders.
 
 ```tsx
-const tickCount = remoteFacet<number>('tick_count', 0);
+const tickCount = remoteFacet<number>("tick_count", 0);
 ```
 
 ### Remote Facets
@@ -70,7 +70,7 @@ UpdateFacet("tick_count", std::to_string(m_state.tickCount));
 
 ```tsx
 // React
-const tickCount = remoteFacet<number>('tick_count', 0);
+const tickCount = remoteFacet<number>("tick_count", 0);
 ```
 
 ### Fast Components
@@ -111,33 +111,37 @@ docs/
 ### Animated Element
 
 ```tsx
-const tickCount = remoteFacet<number>('tick_count', 0);
-const style = useFacetMap(tick => ({
-    transform: `translateX(${tick % 300}px) rotate(${tick * 5}deg)`
-}), [], [tickCount]);
+const tickCount = remoteFacet<number>("tick_count", 0);
+const style = useFacetMap(
+	(tick) => ({
+		transform: `translateX(${tick % 300}px) rotate(${tick * 5}deg)`,
+	}),
+	[],
+	[tickCount]
+);
 
-<FastDiv style={style}>Animated!</FastDiv>
+<FastDiv style={style}>Animated!</FastDiv>;
 ```
 
 ### Form with Validation
 
 ```tsx
 function LoginForm() {
-    const [username, setUsername] = useState('');
-    
-    const handleSubmit = () => {
-        updateGame('login', { username });
-    };
-    
-    return (
-        <Panel>
-            <Input 
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-            />
-            <Button onClick={handleSubmit}>Login</Button>
-        </Panel>
-    );
+	const [username, setUsername] = useState("");
+
+	const handleSubmit = () => {
+		updateGame("login", { username });
+	};
+
+	return (
+		<Panel>
+			<Input
+				value={username}
+				onChange={(e) => setUsername(e.target.value)}
+			/>
+			<Button onClick={handleSubmit}>Login</Button>
+		</Panel>
+	);
 }
 ```
 

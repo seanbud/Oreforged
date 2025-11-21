@@ -111,29 +111,12 @@ class FacetManager {
 6. m_state.renderDistance = 16
 ```
 
-## Threading Model
 
-```
-┌─────────────────────┐
-│   Main Thread       │
-│  - UI Rendering     │
-│  - Event Handling   │
-│  - webview.run()    │
-└──────────┬──────────┘
-           │
-           │ dispatch()
-           ↓
-┌─────────────────────┐
-│   Game Thread       │
-│  - Game Loop (60Hz) │
-│  - Physics          │
-│  - State Updates    │
-└─────────────────────┘
-```
+## Threading Model
 
 **Important**: 
 - `webview.run()` blocks the main thread
-- Game loop runs on separate thread
+- Game loop runs on separate thread at 60 TPS
 - `dispatch()` queues work for main thread
 - All UI updates must use `dispatch()`
 

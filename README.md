@@ -1,13 +1,16 @@
 # OreForged
 
-<div style="display: flex; align-items: center; gap: 10px;">
-  <img src="images/banner.png" alt="OreForged" width="300">
-  <img src="https://i.gyazo.com/d1b056037b992ac613ebb0ca22aae0ab.gif" alt="OreForged GIF" width="300">
-</div>
+<p align="left">
+  <img src="docs/images/banner.png" alt="OreForged" width="300">
+</p>
 
 > A high-performance C++ game engine demo showcasing **OreUI** - a React-based UI library inspired by Mojang's Bedrock Edition UI architecture.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+<p align="left">
+  <img src="https://i.gyazo.com/d1b056037b992ac613ebb0ca22aae0ab.gif" alt="OreForged GIF" width="300">
+</p>
 
 ## 🎯 Project Goals
 

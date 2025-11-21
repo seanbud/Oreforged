@@ -90,25 +90,6 @@ class FacetManager {
 
 **Responsibilities**:
 - Render UI structure
-- Handle user input
-- Subscribe to Facets
-- Update DOM efficiently
-
-## Data Flow
-
-### C++ → UI (State Updates)
-
-```
-1. Game::Update()
-   ↓
-2. UpdateFacet("tick_count", "123")
-   ↓
-3. webview.dispatch(() => webview.eval(...))
-   ↓
-4. window.OreForged.updateFacet("tick_count", 123)
-   ↓
-5. FacetManager.updateFacet(...)
-   ↓
 6. facet.set(123)
    ↓
 7. FastDiv.observe() → element.style.transform = ...

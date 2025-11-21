@@ -8,19 +8,21 @@ OreForged uses a bidirectional data binding system that allows:
 
 ## Architecture
 
-```
-C++ Game Loop (60 TPS)
-    ↓ UpdateFacet()
-webview.eval()
-    ↓ JavaScript
-window.OreForged.updateFacet()
-    ↓
-FacetManager.updateFacet()
-    ↓
-Facet.set()
-    ↓
-FastDiv.observe() → Direct DOM Update
-```
+![Data Flow Diagram](images/data_flow.png)
+
+**C++ → UI Flow**:
+1. Game loop calls `UpdateFacet()`
+2. WebView evaluates JavaScript
+3. `window.OreForged.updateFacet()` called
+4. `FacetManager` updates facet value
+5. `FastDiv` observes change and updates DOM directly
+
+**UI → C++ Flow**:
+1. User interacts with UI
+2. Event handler calls `updateGame()`
+3. `window.updateState()` invoked
+4. C++ binding receives JSON data
+5. Game state updated
 
 ## C++ → UI: Pushing State
 

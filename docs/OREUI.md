@@ -26,6 +26,8 @@ function HealthBar() {
 
 **Problem**: Every health update triggers a full React reconciliation, even though only the `width` style changed.
 
+![Facet Pattern Comparison](images/facet_pattern.png)
+
 ## The OreUI Solution: Facets
 
 ```tsx

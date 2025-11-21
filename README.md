@@ -1,5 +1,7 @@
 # OreForged
 
+![OreForged Logo](docs/images/logo.png)
+
 > A high-performance C++ game engine demo showcasing **OreUI** - a React-based UI library inspired by Mojang's Bedrock Edition UI architecture.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -83,29 +85,7 @@ Keep React for structure and event handling. Use Facets for all dynamic data.
 
 ## 🏗️ Architecture
 
-```
-┌─────────────────┐
-│   C++ Game      │  60 TPS Loop
-│   Loop          │  
-└────────┬────────┘
-         │ UpdateFacet()
-         ▼
-┌─────────────────┐
-│   WebView       │  JavaScript Bridge
-│   (Chromium)    │
-└────────┬────────┘
-         │ window.OreForged.updateFacet()
-         ▼
-┌─────────────────┐
-│ FacetManager    │  State Management
-└────────┬────────┘
-         │ facet.set()
-         ▼
-┌─────────────────┐
-│ React UI        │  Components
-│ (FastDiv, etc)  │
-└─────────────────┘
-```
+![Architecture Diagram](docs/images/architecture.png)
 
 ## 🧩 Component Showcase
 

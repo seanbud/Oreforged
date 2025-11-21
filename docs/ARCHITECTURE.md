@@ -7,15 +7,7 @@ OreForged is a hybrid C++/JavaScript application that combines:
 - **Chromium WebView**: Embedded browser for UI rendering
 - **React + OreUI**: Facet-based UI framework
 
-```mermaid
-graph TB
-    A[C++ Game Engine] -->|webview| B[Chromium WebView]
-    B -->|JavaScript| C[React Application]
-    C -->|OreUI Components| D[DOM]
-    A -->|UpdateFacet| E[FacetManager]
-    E -->|Facet.set| C
-    C -->|updateGame| A
-```
+![System Architecture](images/architecture.png)
 
 ## Layer Breakdown
 

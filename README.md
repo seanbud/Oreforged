@@ -66,16 +66,16 @@ build\bin\Release\OreForged.exe
 
 ### Data Flow
 
-<p align="center">
-  <img src="docs/images/data_flow.png" alt="Data Flow" width="500">
-</p>
-
 The system consists of four main layers:
 
 1. **C++ Game Loop** - Runs at 60 TPS, manages game state
 2. **WebView Bridge** - Chromium-based bridge between C++ and JavaScript
 3. **FacetManager** - Central state management for UI updates
 4. **React UI** - Component-based interface with direct DOM updates
+
+<p align="center">
+  <img src="docs/images/data_flow.png" alt="Data Flow" width="500">
+</p>
 
 ## 🎨 OreUI Philosophy
 

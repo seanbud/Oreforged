@@ -60,6 +60,69 @@ void Game::InitUI() {
         m_webview->w.resolve(seq, 0, R"({"success": true})");
     }, nullptr);
 
+    // Bind world regeneration
+    m_webview->w.bind("regenerateWorld", [&](std::string seq, std::string req, void* /*arg*/) {
+        try {
+            std::cout << "regenerateWorld called with req: " << req << std::endl;
+            
+            // Parse the request - bridge.call sends the args as JSON array
+            auto parsed = nlohmann::json::parse(req);
+            std::cout << "Parsed JSON: " << parsed.dump() << " (type: " << parsed.type_name() << ")" << std::endl;
+            
+            // Handle nested array issue: bridge.call may send ["[333]"] instead of [333]
+            nlohmann::json args;
+            if (parsed.is_array() && !parsed.empty() && parsed[0].is_string()) {
+                std::cout << "First element is string, parsing it: " << parsed[0].dump() << std::endl;
+                args = nlohmann::json::parse(parsed[0].get<std::string>());
+            } else {
+                args = parsed;
+            }
+            
+            std::cout << "Final args: " << args.dump() << std::endl;
+            
+            uint32_t seed = 12345;
+            if (args.is_array() && !args.empty() && args[0].is_number()) {
+                seed = args[0].get<uint32_t>();
+                std::cout << "Extracted seed: " << seed << std::endl;
+            } else {
+                std::cout << "Failed to extract seed, using default: " << seed << std::endl;
+                if (args.is_array() && !args.empty()) {
+                    std::cout << "args[0] type: " << args[0].type_name() << ", value: " << args[0].dump() << std::endl;
+                }
+            }
+            
+            std::cout << "Regenerating world with seed: " << seed << std::endl;
+            
+            // Signal UI to clear all chunks first
+            UpdateFacet("clear_chunks", "true");
+            
+            // Small delay to let UI process the clear signal
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            
+            // Regenerate world
+            m_state.world.Regenerate(seed);
+            
+            // Force immediate update of chunks
+            m_state.world.LoadChunksAroundPosition(0, 0, 1);
+            
+            // Send new chunks to UI with small delays to prevent crash
+            auto chunks = m_state.world.GetLoadedChunks();
+            std::cout << "Sending " << chunks.size() << " regenerated chunks to UI" << std::endl;
+            
+            for (const auto* chunk : chunks) {
+                std::string chunkData = chunk->Serialize();
+                UpdateFacetJSON("chunk_data", chunkData);
+                // Small delay to prevent overwhelming the webview
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            }
+            
+            m_webview->w.resolve(seq, 0, R"({"success": true})");
+        } catch (const std::exception& e) {
+            std::cerr << "Error regenerating world: " << e.what() << std::endl;
+            m_webview->w.resolve(seq, 1, R"({"error": "Regeneration failed"})");
+        }
+    }, nullptr);
+
     // Point to local file relative to executable
     char path[MAX_PATH];
     GetModuleFileNameA(NULL, path, MAX_PATH);

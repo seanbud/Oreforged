@@ -1,18 +1,13 @@
 #include "Chunk.h"
-#include <nlohmann/json.hpp>
-#include <cmath>
-#include <random>
 #include <iostream>
-
-using json = nlohmann::json;
+#include <random>
+#include <cmath>
+#include <algorithm>
 
 namespace OreForged {
 
-Chunk::Chunk(int chunkX, int chunkZ)
-    : m_chunkX(chunkX)
-    , m_chunkZ(chunkZ)
-    , m_dirty(true)
-{
+Chunk::Chunk(int chunkX, int chunkZ) 
+    : m_chunkX(chunkX), m_chunkZ(chunkZ) {
     // Initialize all blocks to air
     for (int x = 0; x < SIZE; x++) {
         for (int y = 0; y < HEIGHT; y++) {
@@ -25,16 +20,15 @@ Chunk::Chunk(int chunkX, int chunkZ)
 
 Block Chunk::GetBlock(int x, int y, int z) const {
     if (!IsValidPosition(x, y, z)) {
-        return Block{BlockType::Air};
+        return Block(); // Return air for out-of-bounds
     }
     return m_blocks[x][y][z];
 }
 
 void Chunk::SetBlock(int x, int y, int z, BlockType type) {
-    if (!IsValidPosition(x, y, z)) return;
-    
-    m_blocks[x][y][z].type = type;
-    m_dirty = true;
+    if (IsValidPosition(x, y, z)) {
+        m_blocks[x][y][z].type = type;
+    }
 }
 
 bool Chunk::IsValidPosition(int x, int y, int z) const {
@@ -43,83 +37,220 @@ bool Chunk::IsValidPosition(int x, int y, int z) const {
            z >= 0 && z < SIZE;
 }
 
-void Chunk::Generate(uint32_t seed) {
-    // Log the seed being used for this chunk
-    std::cout << "Chunk::Generate(" << m_chunkX << "," << m_chunkZ << ") using seed: " << seed << std::endl;
+// ============================================================================
+// TERRAIN GENERATION - Island System with Noise
+// ============================================================================
+
+namespace {
+    const int SEA_LEVEL = 5;
+    const int MIN_HEIGHT = 2;
+    const int MAX_HEIGHT = 12;
+    const float ISLAND_RADIUS = 50.0f;
     
-    // Simple noise-based terrain generation
-    std::mt19937 rng(seed + m_chunkX * 1000 + m_chunkZ);
-    std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+    // Simple hash-based noise function
+    float noise2D(int x, int z, uint32_t seed) {
+        uint32_t n = seed + x * 374761393 + z * 668265263;
+        n = (n ^ (n >> 13)) * 1274126177;
+        return ((n ^ (n >> 16)) & 0x7fffffff) / 2147483648.0f;
+    }
+    
+    // Smooth noise with interpolation
+    float smoothNoise(float x, float z, uint32_t seed) {
+        int intX = static_cast<int>(x);
+        int intZ = static_cast<int>(z);
+        float fracX = x - intX;
+        float fracZ = z - intZ;
+        
+        // Get corner values
+        float v1 = noise2D(intX, intZ, seed);
+        float v2 = noise2D(intX + 1, intZ, seed);
+        float v3 = noise2D(intX, intZ + 1, seed);
+        float v4 = noise2D(intX + 1, intZ + 1, seed);
+        
+        // Bilinear interpolation
+        float i1 = v1 * (1 - fracX) + v2 * fracX;
+        float i2 = v3 * (1 - fracX) + v4 * fracX;
+        return i1 * (1 - fracZ) + i2 * fracZ;
+    }
+    
+    // Multi-octave noise for natural terrain
+    float multiOctaveNoise(float x, float z, uint32_t seed, int octaves) {
+        float total = 0.0f;
+        float frequency = 1.0f;
+        float amplitude = 1.0f;
+        float maxValue = 0.0f;
+        
+        for (int i = 0; i < octaves; i++) {
+            total += smoothNoise(x * frequency, z * frequency, seed + i * 1000) * amplitude;
+            maxValue += amplitude;
+            amplitude *= 0.5f;
+            frequency *= 2.0f;
+        }
+        
+        return total / maxValue;
+    }
+    
+    // Organic island falloff - irregular, natural shape
+    float getIslandFalloff(int worldX, int worldZ) {
+        // Base circular falloff
+        float distance = std::sqrt(static_cast<float>(worldX * worldX + worldZ * worldZ));
+        float baseRadius = 45.0f;
+        
+        if (distance > baseRadius + 15.0f) {
+            return 0.0f;
+        }
+        
+        // Add noise to make the island shape irregular
+        float shapeNoise = noise2D(worldX / 15, worldZ / 15, 12345);
+        float radiusVariation = (shapeNoise - 0.5f) * 20.0f; // +/- 10 blocks variation
+        
+        float effectiveRadius = baseRadius + radiusVariation;
+        
+        if (distance > effectiveRadius) {
+            // Smooth falloff
+            float fadeDistance = 15.0f;
+            float falloff = 1.0f - ((distance - effectiveRadius) / fadeDistance);
+            return std::max(0.0f, falloff);
+        }
+        
+        return 1.0f;
+    }
+    
+    // Calculate terrain height for a world position
+    int calculateHeight(int worldX, int worldZ, uint32_t seed) {
+        // Get island falloff
+        float islandFalloff = getIslandFalloff(worldX, worldZ);
+        
+        if (islandFalloff < 0.05f) {
+            return SEA_LEVEL - 1; // Deep water
+        }
+        
+        // Layer 1: Large rolling hills (base terrain)
+        float largeHills = multiOctaveNoise(worldX / 16.0f, worldZ / 16.0f, seed, 2);
+        
+        // Layer 2: Medium features (plateaus and valleys)
+        float mediumFeatures = multiOctaveNoise(worldX / 8.0f, worldZ / 8.0f, seed + 1000, 2);
+        
+        // Layer 3: Small details
+        float smallDetails = noise2D(worldX / 4, worldZ / 4, seed + 2000);
+        
+        // Combine layers with different weights
+        float combinedNoise = largeHills * 0.5f + mediumFeatures * 0.3f + smallDetails * 0.2f;
+        
+        // Create some dramatic height variation
+        // Center the noise around 0.5, then scale
+        float heightFactor = (combinedNoise - 0.5f) * 2.0f; // -1 to +1
+        
+        // Apply island falloff to make edges lower
+        heightFactor *= islandFalloff;
+        
+        // Add some "plateau" effect - flatten high areas slightly
+        if (heightFactor > 0.3f) {
+            heightFactor = 0.3f + (heightFactor - 0.3f) * 0.5f;
+        }
+        
+        // Calculate final height
+        // Sea level is 5, island ranges from 5 to 11 (6 blocks of variation)
+        int height = SEA_LEVEL + static_cast<int>(heightFactor * 6.0f);
+        
+        // Ensure beaches exist - areas just above water should be flatter
+        if (height == SEA_LEVEL || height == SEA_LEVEL + 1) {
+            // Beach area - make it flatter
+            float beachNoise = noise2D(worldX / 3, worldZ / 3, seed + 3000);
+            if (beachNoise < 0.6f) {
+                height = SEA_LEVEL + 1; // Flat beach
+            }
+        }
+        
+        return std::max(MIN_HEIGHT, std::min(MAX_HEIGHT, height));
+    }
+    
+    // Check if position should be sand (beach)
+    bool shouldBeSand(int worldX, int worldZ, int height, uint32_t seed) {
+        // Only sand near water level
+        if (height < SEA_LEVEL - 1 || height > SEA_LEVEL + 1) {
+            return false;
+        }
+        
+        // Check if near water (check neighbors)
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if (dx == 0 && dz == 0) continue;
+                int neighborHeight = calculateHeight(worldX + dx, worldZ + dz, seed);
+                if (neighborHeight <= SEA_LEVEL) {
+                    return true; // Near water
+                }
+            }
+        }
+        
+        return false;
+    }
+}
+
+void Chunk::Generate(uint32_t seed) {
+    std::cout << "Chunk::Generate(" << m_chunkX << "," << m_chunkZ << ") using seed: " << seed << std::endl;
     
     for (int x = 0; x < SIZE; x++) {
         for (int z = 0; z < SIZE; z++) {
             int worldX = m_chunkX * SIZE + x;
             int worldZ = m_chunkZ * SIZE + z;
             
-            // Use seed-based RNG for height variation
-            // Combine world position with seed for consistent but seed-dependent terrain
-            std::mt19937 posRng(seed + worldX * 73856093 + worldZ * 19349663);
-            std::uniform_real_distribution<float> heightDist(-1.5f, 1.5f);
+            // Calculate terrain height
+            int height = calculateHeight(worldX, worldZ, seed);
             
-            float heightNoise = heightDist(posRng);
-            
-            // Height varies from 3 to 6
-            int height = 4 + static_cast<int>(heightNoise);
-            height = std::max(3, std::min(6, height));
+            // Determine surface block type
+            bool isSand = shouldBeSand(worldX, worldZ, height, seed);
+            BlockType surfaceType = isSand ? BlockType::Sand : BlockType::Grass;
             
             // Build column from bottom to top
             m_blocks[x][0][z].type = BlockType::Bedrock; // Bedrock at bottom
             
-            // Stone layer
-            for (int y = 1; y < height - 1; y++) {
+            // Stone layer (underground) - reduced by 1
+            for (int y = 1; y < height - 1 && y < HEIGHT; y++) {
                 m_blocks[x][y][z].type = BlockType::Stone;
             }
             
-            // Dirt layer
-            if (height > 1) {
+            // Dirt layer (just below surface) - only 1 layer now
+            if (height > 1 && height - 1 < HEIGHT) {
                 m_blocks[x][height - 1][z].type = BlockType::Dirt;
             }
             
-            // Grass on top
+            // Surface block
             if (height < HEIGHT) {
-                m_blocks[x][height][z].type = BlockType::Grass;
+                m_blocks[x][height][z].type = surfaceType;
             }
             
-            // Occasionally add water in low areas
-            float waterNoise = dist(rng);
-            if (height == 3 && waterNoise < 0.1f) {
-                m_blocks[x][height][z].type = BlockType::Water;
+            // Fill with water if below sea level
+            for (int y = height + 1; y <= SEA_LEVEL && y < HEIGHT; y++) {
+                m_blocks[x][y][z].type = BlockType::Water;
             }
-            
-            // Everything above is air (already initialized)
         }
     }
-    
-    m_dirty = true;
 }
 
 std::string Chunk::Serialize() const {
-    json data;
-    data["chunkX"] = m_chunkX;
-    data["chunkZ"] = m_chunkZ;
+    std::string json = "{";
+    json += "\"chunkX\":" + std::to_string(m_chunkX) + ",";
+    json += "\"chunkZ\":" + std::to_string(m_chunkZ) + ",";
+    json += "\"size\":" + std::to_string(SIZE) + ",";
+    json += "\"height\":" + std::to_string(HEIGHT) + ",";
+    json += "\"blocks\":[";
     
-    // Flatten 3D array into 1D for efficient transmission
-    std::vector<uint8_t> blocks;
-    blocks.reserve(SIZE * HEIGHT * SIZE);
-    
+    // Flatten 3D array to 1D: index = y * SIZE * SIZE + z * SIZE + x
+    bool first = true;
     for (int y = 0; y < HEIGHT; y++) {
         for (int z = 0; z < SIZE; z++) {
             for (int x = 0; x < SIZE; x++) {
-                blocks.push_back(static_cast<uint8_t>(m_blocks[x][y][z].type));
+                if (!first) json += ",";
+                json += std::to_string(static_cast<int>(m_blocks[x][y][z].type));
+                first = false;
             }
         }
     }
     
-    data["blocks"] = blocks;
-    data["size"] = SIZE;
-    data["height"] = HEIGHT;
-    
-    return data.dump();
+    json += "]}";
+    return json;
 }
 
 } // namespace OreForged
+

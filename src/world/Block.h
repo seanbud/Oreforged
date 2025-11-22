@@ -14,6 +14,7 @@ enum class BlockType : uint8_t {
     Wood = 5,
     Leaves = 6,
     Bedrock = 7,
+    Sand = 8,
     
     // Add more block types as needed
     Count // Keep this last - represents total number of block types

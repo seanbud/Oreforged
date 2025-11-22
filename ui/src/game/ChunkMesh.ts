@@ -43,9 +43,9 @@ export class ChunkMesh {
             return blocks[index] || 0;
         };
 
-        // Helper to check if block is transparent
+        // Helper to check if block is transparent (for face culling)
         const isTransparent = (blockType: number): boolean => {
-            return blockType === 0 || blockType === 4 || blockType === 6; // Air, Water, Leaves
+            return blockType === 0 || blockType === 6; // Air, Leaves (removed Water so it renders)
         };
 
         // Texture atlas mapping (grid coordinates 0-3, y=0 is bottom)
@@ -85,6 +85,9 @@ export class ChunkMesh {
                     break;
                 case 7: // Bedrock
                     gridX = 0; gridY = 1;
+                    break;
+                case 8: // Sand
+                    gridX = 1; gridY = 1;
                     break;
             }
 

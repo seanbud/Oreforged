@@ -93,16 +93,52 @@ export class ChunkMesh {
 
             // Convert grid coords to UVs
             // 4x4 grid, so each tile is 0.25
-            const u = gridX * 0.25;
-            const v = gridY * 0.25; // In Three.js UVs, 0 is bottom, 1 is top. 
-            // If my atlas has Row 1 at top, that's V=0.75.
-            // My gridY=3 corresponds to Top Row. 3 * 0.25 = 0.75. Correct.
+            const u0 = gridX * 0.25;
+            const v0 = gridY * 0.25;
+            const u1 = u0 + 0.25;
+            const v1 = v0 + 0.25;
 
+            // Return UVs based on face direction to match vertex winding
+            // Vertices order for each face is different, so UVs must match
+
+            // Top (Y+) and Right (X+) use Standard: BL, BR, TR, TL
+            if (faceDir[1] === 1 || faceDir[0] === 1) {
+                return [
+                    [u0, v0], [u1, v0], [u1, v1], [u0, v1]
+                ];
+            }
+
+            // Front (Z+): BL, TL, TR, BR
+            if (faceDir[2] === 1) {
+                return [
+                    [u0, v0], [u0, v1], [u1, v1], [u1, v0]
+                ];
+            }
+
+            // Back (Z-): BR, BL, TL, TR
+            if (faceDir[2] === -1) {
+                return [
+                    [u1, v0], [u0, v0], [u0, v1], [u1, v1]
+                ];
+            }
+
+            // Left (X-): BR, TR, TL, BL
+            if (faceDir[0] === -1) {
+                return [
+                    [u1, v0], [u1, v1], [u0, v1], [u0, v0]
+                ];
+            }
+
+            // Bottom (Y-): TL, BL, BR, TR
+            if (faceDir[1] === -1) {
+                return [
+                    [u0, v1], [u0, v0], [u1, v0], [u1, v1]
+                ];
+            }
+
+            // Fallback (should not happen)
             return [
-                [u, v],             // Bottom-Left
-                [u + 0.25, v],      // Bottom-Right
-                [u + 0.25, v + 0.25], // Top-Right
-                [u, v + 0.25]       // Top-Left
+                [u0, v0], [u1, v0], [u1, v1], [u0, v1]
             ];
         };
 

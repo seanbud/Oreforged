@@ -27,21 +27,31 @@ class FacetManager {
 
 export const facetManager = new FacetManager();
 
-declare global {
-    interface Window {
-        OreForged: {
-            updateFacet: (id: string, value: any) => void;
-        };
-    }
-}
-
 window.OreForged = window.OreForged || {};
 window.OreForged.updateFacet = (id, value) => {
     facetManager.updateFacet(id, value);
 };
 
-export function updateGame(key: string, value: any) {
-    if ((window as any).updateState) {
-        (window as any).updateState(key, value);
+export const bridge = {
+    call: (name: string, args: any[]) => {
+        if ((window as any)[name]) {
+            return (window as any)[name](JSON.stringify(args));
+        }
+        console.warn(`Bridge call failed: ${name} not found`);
+    },
+    uiReady: () => {
+        if ((window as any).uiReady) {
+            (window as any).uiReady();
+        }
+    }
+};
+
+declare global {
+    interface Window {
+        OreForged: {
+            updateFacet: (id: string, value: any) => void;
+            uiReady?: () => void;
+        };
+        uiReady?: () => void;
     }
 }

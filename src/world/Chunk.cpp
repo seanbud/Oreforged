@@ -2,6 +2,7 @@
 #include <nlohmann/json.hpp>
 #include <cmath>
 #include <random>
+#include <iostream>
 
 using json = nlohmann::json;
 
@@ -43,6 +44,9 @@ bool Chunk::IsValidPosition(int x, int y, int z) const {
 }
 
 void Chunk::Generate(uint32_t seed) {
+    // Log the seed being used for this chunk
+    std::cout << "Chunk::Generate(" << m_chunkX << "," << m_chunkZ << ") using seed: " << seed << std::endl;
+    
     // Simple noise-based terrain generation
     std::mt19937 rng(seed + m_chunkX * 1000 + m_chunkZ);
     std::uniform_real_distribution<float> dist(0.0f, 1.0f);
@@ -52,13 +56,16 @@ void Chunk::Generate(uint32_t seed) {
             int worldX = m_chunkX * SIZE + x;
             int worldZ = m_chunkZ * SIZE + z;
             
-            // Simple noise function (we'll improve this later with proper Perlin noise)
-            float noise = dist(rng);
-            float heightNoise = std::sin(worldX * 0.1f) * std::cos(worldZ * 0.1f);
+            // Use seed-based RNG for height variation
+            // Combine world position with seed for consistent but seed-dependent terrain
+            std::mt19937 posRng(seed + worldX * 73856093 + worldZ * 19349663);
+            std::uniform_real_distribution<float> heightDist(-1.5f, 1.5f);
             
-            // Height varies from 3 to 5 (mostly flat)
-            int height = 4 + static_cast<int>(heightNoise * 1.5f);
-            height = std::max(3, std::min(5, height));
+            float heightNoise = heightDist(posRng);
+            
+            // Height varies from 3 to 6
+            int height = 4 + static_cast<int>(heightNoise);
+            height = std::max(3, std::min(6, height));
             
             // Build column from bottom to top
             m_blocks[x][0][z].type = BlockType::Bedrock; // Bedrock at bottom
@@ -79,7 +86,8 @@ void Chunk::Generate(uint32_t seed) {
             }
             
             // Occasionally add water in low areas
-            if (height == 3 && noise < 0.1f) {
+            float waterNoise = dist(rng);
+            if (height == 3 && waterNoise < 0.1f) {
                 m_blocks[x][height][z].type = BlockType::Water;
             }
             

@@ -42,6 +42,9 @@ public:
     
     uint32_t GetSeed() const { return m_seed; }
     
+    // Regenerate world with new seed
+    void Regenerate(uint32_t seed);
+    
 private:
     uint32_t m_seed;
     std::unordered_map<ChunkPos, std::unique_ptr<Chunk>, ChunkPosHash> m_chunks;

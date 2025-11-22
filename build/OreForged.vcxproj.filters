@@ -7,9 +7,24 @@
     <ClCompile Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\Game.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\world\Chunk.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\world\World.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\Game.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\world\Block.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\world\Chunk.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\world\World.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

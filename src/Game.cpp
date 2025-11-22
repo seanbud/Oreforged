@@ -52,6 +52,14 @@ void Game::InitUI() {
         m_webview->w.resolve(seq, 0, "OK");
     }, nullptr);
 
+    // Bind quit application
+    m_webview->w.bind("quitApplication", [&](std::string seq, std::string req, void* /*arg*/) {
+        std::cout << "Quit application requested from UI" << std::endl;
+        m_isRunning = false;
+        m_webview->w.terminate();
+        m_webview->w.resolve(seq, 0, R"({"success": true})");
+    }, nullptr);
+
     // Point to local file relative to executable
     char path[MAX_PATH];
     GetModuleFileNameA(NULL, path, MAX_PATH);

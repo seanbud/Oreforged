@@ -1,4 +1,5 @@
 #include "World.h"
+#include <iostream>
 
 namespace OreForged {
 
@@ -63,6 +64,16 @@ void World::GenerateChunk(int chunkX, int chunkZ) {
     chunk->Generate(m_seed);
     
     m_chunks[pos] = std::move(chunk);
+}
+
+void World::Regenerate(uint32_t seed) {
+    std::cout << "World::Regenerate called with seed: " << seed << std::endl;
+    std::cout << "Old seed was: " << m_seed << std::endl;
+    m_seed = seed;
+    std::cout << "New seed is now: " << m_seed << std::endl;
+    m_chunks.clear();
+    std::cout << "Chunks cleared, count: " << m_chunks.size() << std::endl;
+    // Chunks will be regenerated when LoadChunksAroundPosition is called by Game loop
 }
 
 void World::LoadChunksAroundPosition(int centerChunkX, int centerChunkZ, int radius) {

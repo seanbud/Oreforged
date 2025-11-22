@@ -1,24 +1,34 @@
 import React from 'react';
-import { Colors, Styles } from '../design/tokens';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label?: string;
 }
 
-const Input: React.FC<InputProps> = ({ label, style, ...props }) => {
+export const Input: React.FC<InputProps> = ({ label, style, ...props }) => {
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontFamily: Styles.Font.Family, color: Colors.Grey.Text }}>
-            {label && <label>{label}</label>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+            {label && (
+                <label style={{
+                    fontSize: '14px',
+                    color: '#fff',
+                    fontFamily: '"Minecraft", "Press Start 2P", monospace',
+                    textShadow: '2px 2px 0px #000'
+                }}>
+                    {label}
+                </label>
+            )}
             <input
                 style={{
-                    backgroundColor: Colors.Grey.Dark,
-                    border: `${Styles.Border.Width} ${Styles.Border.Style} ${Colors.Grey.Base}`, // Outer border
-                    padding: '8px',
-                    color: Colors.White,
-                    fontFamily: 'inherit',
-                    fontSize: '1rem',
+                    padding: '10px',
+                    borderRadius: '0',
+                    border: '2px solid #000',
+                    backgroundColor: '#8B8B8B',
+                    color: '#fff',
                     outline: 'none',
-                    boxShadow: Styles.Shadows.BevelInverted(Colors.Grey.Base, Colors.Grey.Base), // Simple inset look
+                    fontFamily: '"Minecraft", monospace',
+                    fontSize: '14px',
+                    boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.5), inset -2px -2px 0px rgba(255,255,255,0.3)',
+                    imageRendering: 'pixelated',
                     ...style
                 }}
                 {...props}
@@ -26,5 +36,3 @@ const Input: React.FC<InputProps> = ({ label, style, ...props }) => {
         </div>
     );
 };
-
-export default Input;

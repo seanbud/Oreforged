@@ -4,15 +4,30 @@ import { ChunkMesh, ChunkData } from './ChunkMesh';
 import { remoteFacet } from '../engine/hooks';
 import { BLOCKS_TEXTURE } from './blocks_texture';
 
-export function VoxelRenderer() {
+interface VoxelRendererProps {
+    autoRotate?: boolean;
+    rotationSpeed?: number;
+}
+
+export function VoxelRenderer({ autoRotate = false, rotationSpeed = 0 }: VoxelRendererProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const sceneRef = useRef<THREE.Scene | null>(null);
     const cameraRef = useRef<THREE.OrthographicCamera | null>(null);
     const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
     const chunksRef = useRef<Map<string, ChunkMesh>>(new Map());
     const materialRef = useRef<THREE.Material | null>(null);
+    const rotationRef = useRef(0);
+    const autoRotateRef = useRef(autoRotate);
+    const rotationSpeedRef = useRef(rotationSpeed);
 
     const chunkDataFacet = remoteFacet<ChunkData | null>('chunk_data', null);
+    const clearChunksFacet = remoteFacet<string | null>('clear_chunks', null);
+
+    // Keep autoRotateRef and rotationSpeedRef in sync with props
+    useEffect(() => {
+        autoRotateRef.current = autoRotate;
+        rotationSpeedRef.current = rotationSpeed;
+    }, [autoRotate, rotationSpeed]);
 
     // Initialize Three.js scene
     useEffect(() => {
@@ -100,6 +115,17 @@ export function VoxelRenderer() {
         let animationFrameId: number;
         const animate = () => {
             animationFrameId = requestAnimationFrame(animate);
+
+            // Auto-rotation logic
+            if (autoRotateRef.current && camera && rotationSpeedRef.current !== 0) {
+                // Negative speed = counter-clockwise, positive = clockwise
+                rotationRef.current += 0.005 * rotationSpeedRef.current;
+                const radius = 56.5; // sqrt(40^2 + 40^2) approx
+                camera.position.x = Math.sin(rotationRef.current + Math.PI / 4) * radius;
+                camera.position.z = Math.cos(rotationRef.current + Math.PI / 4) * radius;
+                camera.lookAt(0, 0, 0);
+            }
+
             renderer.render(scene, camera);
         };
         animate();
@@ -125,14 +151,37 @@ export function VoxelRenderer() {
         };
     }, []);
 
+    // Listen for clear chunks signal
+    useEffect(() => {
+        console.log('Setting up clear chunks listener...');
+
+        const unsubscribe = clearChunksFacet.observe((signal) => {
+            if (!signal) return;
+
+            console.log('Clear chunks signal received, disposing all chunks');
+
+            if (sceneRef.current) {
+                // Dispose all existing chunks
+                chunksRef.current.forEach(chunk => chunk.dispose(sceneRef.current!));
+                chunksRef.current.clear();
+                console.log('All chunks cleared');
+            }
+        });
+
+        return () => {
+            unsubscribe();
+        };
+    }, [clearChunksFacet]);
+
     // Listen for chunk data from C++
     useEffect(() => {
         console.log('Setting up chunk data listener...');
 
         const unsubscribe = chunkDataFacet.observe((chunkData) => {
-            // console.log('Facet updated, chunk data:', chunkData);
+            console.log('Facet observe callback triggered, chunkData type:', typeof chunkData);
 
             if (!chunkData) {
+                console.log('Chunk data is null/undefined, skipping');
                 return;
             }
 
@@ -142,28 +191,40 @@ export function VoxelRenderer() {
             }
 
             try {
+                console.log('Raw chunk data:', chunkData);
+
                 // Parse if it's a string (JSON)
                 let data: ChunkData;
                 if (typeof chunkData === 'string') {
+                    console.log('Parsing chunk data from string');
                     data = JSON.parse(chunkData);
                 } else {
+                    console.log('Using chunk data as-is (already parsed)');
                     data = chunkData;
                 }
 
+                console.log('Parsed chunk data:', data);
+
                 const key = `${data.chunkX},${data.chunkZ}`;
-                // console.log(`Processing chunk at ${key}`);
+                console.log(`Processing chunk at ${key}`);
 
                 // Create or update chunk mesh
                 let chunkMesh = chunksRef.current.get(key);
                 if (!chunkMesh) {
+                    console.log(`Creating new ChunkMesh for ${key}`);
                     chunkMesh = new ChunkMesh(data.chunkX, data.chunkZ);
                     chunksRef.current.set(key, chunkMesh);
+                } else {
+                    console.log(`Updating existing ChunkMesh for ${key}`);
                 }
 
-                chunkMesh.rebuild(data, sceneRef.current, materialRef.current);
-                // console.log(`Chunk ${key} rendered successfully`);
+                console.log(`Rebuilding mesh for chunk ${key}`);
+                chunkMesh.rebuild(data, sceneRef.current!, materialRef.current!);
+                console.log(`Chunk ${key} rendered successfully`);
             } catch (error) {
                 console.error('Error processing chunk:', error);
+                console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+                console.error('Chunk data that caused error:', chunkData);
             }
         });
 

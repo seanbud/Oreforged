@@ -431,6 +431,11 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\main.cpp" />
     <ClCompile Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\Game.cpp" />
     <ClInclude Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\Game.h" />
+    <ClInclude Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\world\Block.h" />
+    <ClInclude Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\world\Chunk.h" />
+    <ClCompile Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\world\Chunk.cpp" />
+    <ClInclude Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\world\World.h" />
+    <ClCompile Include="C:\Users\Sean\Documents\GitHub\Oreforged\src\world\World.cpp" />
     <Natvis Include="C:\Users\Sean\Documents\GitHub\Oreforged\build\_deps\json-src\nlohmann_json.natvis">
     </Natvis>
   </ItemGroup>

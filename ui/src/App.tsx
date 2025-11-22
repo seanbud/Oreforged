@@ -1,34 +1,41 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { VoxelRenderer } from './game/VoxelRenderer';
+import { bridge } from './engine/bridge';
+import { Input } from './components/Input';
+import { ProgressBar } from './components/ProgressBar';
+import { Slider } from './components/Slider';
 import Panel from './components/Panel';
-import { remoteFacet } from './engine/hooks';
-import { useFacetMap } from '@react-facet/core';
-import { FastLabel } from './engine/components';
-
-declare global {
-    interface Window {
-        uiReady?: () => void;
-    }
-}
-
-const tickCountFacet = remoteFacet<number>('tick_count', 0);
 
 function App() {
-    const tickText = useFacetMap(tick => `Tick: ${tick}`, [], [tickCountFacet]);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [seed, setSeed] = useState('12345');
+    const [isRotating, setIsRotating] = useState(false);
+    const [rotationSpeed, setRotationSpeed] = useState(0);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [progress, setProgress] = useState(0);
 
     useEffect(() => {
-        console.log("App mounted, checking uiReady");
-        // Signal C++ that UI is ready to receive data
-        if (window.uiReady) {
-            console.log("Calling uiReady");
-            window.uiReady();
-        } else {
-            console.error("uiReady not defined on window object");
-            console.log("Window keys:", Object.keys(window));
-        }
+        console.log('App mounted, checking uiReady');
+        let attempts = 0;
+        const maxAttempts = 50;
 
-        // Input listener for ESC
+        const checkReady = () => {
+            if (window.uiReady) {
+                console.log('Calling uiReady');
+                bridge.uiReady();
+            } else {
+                attempts++;
+                if (attempts < maxAttempts) {
+                    console.log(`window.uiReady not found, retrying... (${attempts}/${maxAttempts})`);
+                    setTimeout(checkReady, 100);
+                } else {
+                    console.error('Given up waiting for window.uiReady');
+                }
+            }
+        };
+
+        checkReady();
+
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 setIsMenuOpen(prev => !prev);
@@ -38,42 +45,84 @@ function App() {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    return (
-        <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
-            {/* 3D Voxel World */}
-            <VoxelRenderer />
+    const handleRegenerate = async () => {
+        if (isGenerating) return;
 
-            {/* UI Overlay */}
+        setIsGenerating(true);
+        setProgress(0);
+
+        const interval = setInterval(() => {
+            setProgress(prev => {
+                if (prev >= 90) {
+                    clearInterval(interval);
+                    return 90;
+                }
+                return prev + 10;
+            });
+        }, 100);
+
+        try {
+            const seedNum = parseInt(seed) || 12345;
+            await bridge.call('regenerateWorld', [seedNum]);
+        } catch (e) {
+            console.error("Regeneration failed", e);
+        }
+
+        clearInterval(interval);
+        setProgress(100);
+        setTimeout(() => setIsGenerating(false), 500);
+    };
+
+    const handleQuit = async () => {
+        try {
+            await bridge.call('quitApplication', []);
+        } catch (e) {
+            console.error('Failed to quit:', e);
+        }
+    };
+
+    return (
+        <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+            <VoxelRenderer autoRotate={isRotating} rotationSpeed={rotationSpeed} />
+
             <div style={{
                 position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                pointerEvents: 'none', // Allow clicks to pass through to 3D scene
+                top: '20px',
+                left: '20px',
+                pointerEvents: 'none'
             }}>
-                {/* Top-left debug panel */}
-                <div style={{
-                    position: 'absolute',
-                    top: '20px',
-                    left: '20px',
-                    pointerEvents: 'auto', // Re-enable pointer events for this panel
-                }}>
-                    <Panel style={{ padding: '12px', minWidth: '200px' }}>
-                        <div style={{ color: '#fff', fontSize: '14px' }}>
-                            <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>OreForged</div>
-                            <div style={{ color: '#aaa' }}>
-                                <FastLabel text={tickText} />
-                            </div>
-                            <div style={{ color: '#aaa', marginTop: '4px', fontSize: '12px' }}>
-                                Press ESC for menu
-                            </div>
+                <Panel style={{ padding: '12px', minWidth: '200px', pointerEvents: 'auto' }}>
+                    <div style={{ color: '#fff', fontSize: '14px' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>OreForged Pre-Alpha</div>
+                        <div style={{ color: '#aaa', marginTop: '4px', fontSize: '12px' }}>
+                            Press ESC for menu
                         </div>
-                    </Panel>
-                </div>
+                    </div>
+                </Panel>
             </div>
 
-            {/* Menu Overlay */}
+            {isGenerating && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 2000,
+                    color: 'white'
+                }}>
+                    <h2 style={{
+                        fontFamily: '"Minecraft", "Press Start 2P", monospace',
+                        textShadow: '3px 3px 0px #000'
+                    }}>Regenerating World...</h2>
+                    <div style={{ width: '300px' }}>
+                        <ProgressBar progress={progress} />
+                    </div>
+                </div>
+            )}
+
             {isMenuOpen && (
                 <div style={{
                     position: 'absolute',
@@ -85,21 +134,159 @@ function App() {
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    zIndex: 100
+                    zIndex: 1000
                 }}>
-                    <Panel style={{ padding: '20px', minWidth: '300px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <h2 style={{ color: 'white', margin: '0 0 20px 0', textAlign: 'center' }}>Game Menu</h2>
+                    <div style={{
+                        backgroundColor: '#3C3C3C',
+                        padding: '24px',
+                        borderRadius: '0',
+                        minWidth: '350px',
+                        color: 'white',
+                        border: '4px solid #000',
+                        boxShadow: 'inset -4px -4px 0px rgba(0,0,0,0.5), inset 4px 4px 0px rgba(255,255,255,0.3), 0 8px 16px rgba(0,0,0,0.5)',
+                        imageRendering: 'pixelated'
+                    }}>
+                        <h2 style={{
+                            marginTop: 0,
+                            textAlign: 'center',
+                            borderBottom: '2px solid #000',
+                            paddingBottom: '12px',
+                            fontFamily: '"Minecraft", "Press Start 2P", monospace',
+                            fontSize: '18px',
+                            color: '#fff',
+                            textShadow: '3px 3px 0px #000'
+                        }}>
+                            Game Menu
+                        </h2>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
+                            <Input
+                                label="World Seed"
+                                value={seed}
+                                onChange={(e) => setSeed(e.target.value)}
+                                type="number"
+                            />
+
                             <button
-                                style={{ padding: '10px', cursor: 'pointer', fontSize: '16px' }}
+                                onClick={handleRegenerate}
+                                disabled={isGenerating}
+                                style={{
+                                    padding: '12px 20px',
+                                    backgroundColor: isGenerating ? '#3B3B3B' : '#5B5B5B',
+                                    color: '#fff',
+                                    border: '2px solid #000',
+                                    borderRadius: '0',
+                                    cursor: isGenerating ? 'not-allowed' : 'pointer',
+                                    fontWeight: 'bold',
+                                    fontFamily: '"Minecraft", "Press Start 2P", monospace',
+                                    fontSize: '14px',
+                                    textShadow: '2px 2px 0px #000',
+                                    boxShadow: 'inset -2px -2px 0px rgba(0,0,0,0.5), inset 2px 2px 0px rgba(255,255,255,0.3)',
+                                    imageRendering: 'pixelated',
+                                    transition: 'all 0.1s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (!isGenerating) e.currentTarget.style.backgroundColor = '#7B7B7B';
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!isGenerating) e.currentTarget.style.backgroundColor = '#5B5B5B';
+                                }}
+                            >
+                                Regenerate World
+                            </button>
+
+                            <div style={{ marginTop: '16px', borderTop: '2px solid #000', paddingTop: '16px' }}>
+                                <label style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    cursor: 'pointer',
+                                    marginBottom: '12px',
+                                    fontFamily: '"Minecraft", monospace',
+                                    fontSize: '14px',
+                                    color: '#fff',
+                                    textShadow: '2px 2px 0px #000'
+                                }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={isRotating}
+                                        onChange={(e) => setIsRotating(e.target.checked)}
+                                        style={{
+                                            width: '20px',
+                                            height: '20px',
+                                            cursor: 'pointer'
+                                        }}
+                                    />
+                                    Auto-Rotate Camera
+                                </label>
+
+                                {isRotating && (
+                                    <Slider
+                                        label="Rotation Speed"
+                                        min={-2}
+                                        max={2}
+                                        step={0.1}
+                                        value={rotationSpeed}
+                                        onChange={(e) => setRotationSpeed(parseFloat(e.target.value))}
+                                    />
+                                )}
+                            </div>
+
+                            <button
                                 onClick={() => setIsMenuOpen(false)}
+                                style={{
+                                    marginTop: '20px',
+                                    padding: '12px 20px',
+                                    backgroundColor: '#5B5B5B',
+                                    color: '#fff',
+                                    border: '2px solid #000',
+                                    borderRadius: '0',
+                                    cursor: 'pointer',
+                                    fontFamily: '"Minecraft", "Press Start 2P", monospace',
+                                    fontSize: '14px',
+                                    textShadow: '2px 2px 0px #000',
+                                    boxShadow: 'inset -2px -2px 0px rgba(0,0,0,0.5), inset 2px 2px 0px rgba(255,255,255,0.3)',
+                                    imageRendering: 'pixelated',
+                                    transition: 'all 0.1s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#7B7B7B';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#5B5B5B';
+                                }}
                             >
                                 Resume Game
                             </button>
-                            <button style={{ padding: '10px', cursor: 'pointer', fontSize: '16px' }}>Settings</button>
-                            <button style={{ padding: '10px', cursor: 'pointer', fontSize: '16px' }}>Quit</button>
+
+                            <button
+                                onClick={handleQuit}
+                                style={{
+                                    marginTop: '10px',
+                                    padding: '12px 20px',
+                                    backgroundColor: '#8B0000',
+                                    color: '#fff',
+                                    border: '2px solid #000',
+                                    borderRadius: '0',
+                                    cursor: 'pointer',
+                                    fontFamily: '"Minecraft", "Press Start 2P", monospace',
+                                    fontSize: '14px',
+                                    textShadow: '2px 2px 0px #000',
+                                    boxShadow: 'inset -2px -2px 0px rgba(0,0,0,0.5), inset 2px 2px 0px rgba(255,255,255,0.3)',
+                                    imageRendering: 'pixelated',
+                                    transition: 'all 0.1s'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#B00000';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#8B0000';
+                                }}
+                            >
+                                Quit Application
+                            </button>
                         </div>
-                    </Panel>
+                    </div>
                 </div>
             )}
         </div>

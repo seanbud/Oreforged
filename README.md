@@ -1,7 +1,7 @@
 # OreForged
 
 <p align="left">
-  <img src="docs/images/banner.png" alt="OreForged" width="300">
+  <img src="docs/images/logo.png" alt="OreForged" width="300">
 </p>
 
 > A high-performance C++ game engine demo showcasing **OreUI** - a React-based UI library inspired by Mojang's Bedrock Edition UI architecture.

@@ -10,7 +10,7 @@ namespace OreForged {
 class Chunk {
 public:
     static constexpr int SIZE = 16;   // 16x16 blocks per chunk
-    static constexpr int HEIGHT = 8;  // 8 blocks tall (shallow world)
+    static constexpr int HEIGHT = 16; // 16 blocks tall (deeper world)
     
     Chunk(int chunkX, int chunkZ);
     
@@ -42,6 +42,12 @@ private:
     
     // Helper for array bounds checking
     bool IsValidPosition(int x, int y, int z) const;
+    
+    // Generation helpers
+    void GenerateOres(uint32_t seed);
+    void GenerateTrees(uint32_t seed);
+    void PlaceTree(int x, int baseY, int z, int trunkHeight);
+    int FindSurfaceY(int x, int z) const;
 };
 
 } // namespace OreForged

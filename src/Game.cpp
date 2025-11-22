@@ -102,8 +102,8 @@ void Game::InitUI() {
             // Regenerate world
             m_state.world.Regenerate(seed);
             
-            // Force immediate update of chunks (7x7 grid to show island + water)
-            m_state.world.LoadChunksAroundPosition(0, 0, 3);
+            // Force immediate update of chunks (11x11 grid to show island + water)
+            m_state.world.LoadChunksAroundPosition(0, 0, 5);
             
             // Send new chunks to UI with small delays to prevent crash
             auto chunks = m_state.world.GetLoadedChunks();
@@ -183,15 +183,14 @@ void Game::Update() {
     // Generate initial chunks on first tick
     if (m_state.tickCount == 1) {
         std::cout << "Generating world chunks..." << std::endl;
-        // Load a 7x7 grid of chunks around origin (0, 0) to show island + water
-        m_state.world.LoadChunksAroundPosition(0, 0, 3);
+        // Load a 11x11 grid of chunks around origin (0, 0) to show island + water
+        m_state.world.LoadChunksAroundPosition(0, 0, 5);
         std::cout << "Generated " << m_state.world.GetLoadedChunks().size() << " chunks" << std::endl;
     }
     
     // Update tick count to UI every 60 ticks
     if (m_uiReady && m_state.tickCount % 60 == 0) {
         UpdateFacet("tick_count", std::to_string(m_state.tickCount));
-        // std::cout << "Tick: " << m_state.tickCount << std::endl;
     }
 }
 

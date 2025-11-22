@@ -43,16 +43,17 @@ export class ChunkMesh {
             return blocks[index] || 0;
         };
 
+
         // Helper to check if block is transparent (for face culling)
         const isTransparent = (blockType: number): boolean => {
-            return blockType === 0 || blockType === 6; // Air, Leaves (removed Water so it renders)
+            return blockType === 0; // Only Air is transparent
         };
 
         // Texture atlas mapping (grid coordinates 0-3, y=0 is bottom)
         // Atlas is 4x4
         const getTextureUV = (blockType: number, faceDir: number[]) => {
             let gridX = 2; // Default Dirt
-            let gridY = 3;
+            let gridY = 0;
 
             // Face directions: 0=Top, 1=Bottom, 2=Front, 3=Back, 4=Right, 5=Left
             // My faces array order: Top, Bottom, Front, Back, Right, Left
@@ -64,30 +65,45 @@ export class ChunkMesh {
             switch (blockType) {
                 case 1: // Grass
                     if (isTop) { gridX = 0; gridY = 3; } // Grass Top
-                    else if (isBottom) { gridX = 2; gridY = 3; } // Dirt
-                    else { gridX = 1; gridY = 3; } // Grass Side
+                    else if (isBottom) { gridX = 2; gridY = 3; } // Dirt (bottom of grass)
+                    else { gridX = 3; gridY = 3; } // Grass Side
                     break;
                 case 2: // Dirt
                     gridX = 2; gridY = 3;
                     break;
                 case 3: // Stone
-                    gridX = 3; gridY = 3;
+                    gridX = 1; gridY = 3;
                     break;
                 case 4: // Water
-                    gridX = 0; gridY = 2;
+                    gridX = 0; gridY = 0;
                     break;
                 case 5: // Wood
-                    if (isSide) { gridX = 1; gridY = 2; } // Wood Side
-                    else { gridX = 2; gridY = 2; } // Wood Top
+                    if (isSide) { gridX = 0; gridY = 2; } // Wood Side
+                    else { gridX = 1; gridY = 2; } // Wood Top
                     break;
                 case 6: // Leaves
-                    gridX = 3; gridY = 2;
+                    gridX = 2; gridY = 2;
                     break;
                 case 7: // Bedrock
-                    gridX = 0; gridY = 1;
+                    gridX = 1; gridY = 0;
                     break;
                 case 8: // Sand
+                    gridX = 3; gridY = 2;
+                    break;
+                case 9: // Coal
+                    gridX = 0; gridY = 1;
+                    break;
+                case 10: // Iron
                     gridX = 1; gridY = 1;
+                    break;
+                case 11: // Gold
+                    gridX = 2; gridY = 1;
+                    break;
+                case 12: // Diamond
+                    gridX = 3; gridY = 1;
+                    break;
+                default:
+                    gridX = 2; gridY = 0; // Error/Empty
                     break;
             }
 

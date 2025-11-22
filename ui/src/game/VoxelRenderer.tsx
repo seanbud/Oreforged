@@ -73,8 +73,8 @@ export function VoxelRenderer({ autoRotate = false, rotationSpeed = 0 }: VoxelRe
         scene.add(directionalLight);
 
         // Grid helper (for debugging)
-        const gridHelper = new THREE.GridHelper(100, 100, 0x888888, 0x444444);
-        scene.add(gridHelper);
+        // const gridHelper = new THREE.GridHelper(100, 100, 0x888888, 0x444444);
+        // scene.add(gridHelper);
 
         // Load Texture Atlas from Base64
         const loader = new THREE.TextureLoader();
@@ -178,10 +178,10 @@ export function VoxelRenderer({ autoRotate = false, rotationSpeed = 0 }: VoxelRe
         console.log('Setting up chunk data listener...');
 
         const unsubscribe = chunkDataFacet.observe((chunkData) => {
-            console.log('Facet observe callback triggered, chunkData type:', typeof chunkData);
+            // console.log('Facet observe callback triggered, chunkData type:', typeof chunkData);
 
             if (!chunkData) {
-                console.log('Chunk data is null/undefined, skipping');
+                // console.log('Chunk data is null/undefined, skipping');
                 return;
             }
 
@@ -191,36 +191,36 @@ export function VoxelRenderer({ autoRotate = false, rotationSpeed = 0 }: VoxelRe
             }
 
             try {
-                console.log('Raw chunk data:', chunkData);
+                // console.log('Raw chunk data:', chunkData);
 
                 // Parse if it's a string (JSON)
                 let data: ChunkData;
                 if (typeof chunkData === 'string') {
-                    console.log('Parsing chunk data from string');
+                    // console.log('Parsing chunk data from string');
                     data = JSON.parse(chunkData);
                 } else {
-                    console.log('Using chunk data as-is (already parsed)');
+                    // console.log('Using chunk data as-is (already parsed)');
                     data = chunkData;
                 }
 
-                console.log('Parsed chunk data:', data);
+                // console.log('Parsed chunk data:', data);
 
                 const key = `${data.chunkX},${data.chunkZ}`;
-                console.log(`Processing chunk at ${key}`);
+                // console.log(`Processing chunk at ${key}`);
 
                 // Create or update chunk mesh
                 let chunkMesh = chunksRef.current.get(key);
                 if (!chunkMesh) {
-                    console.log(`Creating new ChunkMesh for ${key}`);
+                    // console.log(`Creating new ChunkMesh for ${key}`);
                     chunkMesh = new ChunkMesh(data.chunkX, data.chunkZ);
                     chunksRef.current.set(key, chunkMesh);
                 } else {
-                    console.log(`Updating existing ChunkMesh for ${key}`);
+                    // console.log(`Updating existing ChunkMesh for ${key}`);
                 }
 
-                console.log(`Rebuilding mesh for chunk ${key}`);
+                // console.log(`Rebuilding mesh for chunk ${key}`);
                 chunkMesh.rebuild(data, sceneRef.current!, materialRef.current!);
-                console.log(`Chunk ${key} rendered successfully`);
+                // console.log(`Chunk ${key} rendered successfully`);
             } catch (error) {
                 console.error('Error processing chunk:', error);
                 console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');

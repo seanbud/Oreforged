@@ -3,6 +3,8 @@
 #include <random>
 #include <cmath>
 #include <algorithm>
+#include <vector>
+#include <tuple>
 
 namespace OreForged {
 
@@ -226,6 +228,12 @@ void Chunk::Generate(uint32_t seed) {
             }
         }
     }
+    
+    // Generate ores in stone layers
+    GenerateOres(seed);
+    
+    // Generate trees on grass
+    GenerateTrees(seed);
 }
 
 std::string Chunk::Serialize() const {
@@ -252,5 +260,150 @@ std::string Chunk::Serialize() const {
     return json;
 }
 
+// ============================================================================
+// ORE GENERATION
+// ============================================================================
+
+void Chunk::GenerateOres(uint32_t seed) {
+    // Place ores on the surface as decorative blocks
+    for (int x = 0; x < SIZE; x++) {
+        for (int z = 0; z < SIZE; z++) {
+            int surfaceY = FindSurfaceY(x, z);
+            
+            // Only place on grass blocks
+            if (surfaceY < 0 || m_blocks[x][surfaceY][z].type != BlockType::Grass) continue;
+            
+            // Check if there's space above
+            if (surfaceY + 1 >= HEIGHT) continue;
+            
+            int worldX = m_chunkX * SIZE + x;
+            int worldZ = m_chunkZ * SIZE + z;
+            
+            // Use noise to determine ore type
+            float oreNoise = noise2D(worldX, worldZ, seed + 6000);
+            
+            // Place ore blocks on surface with different rarities
+            if (oreNoise > 0.98f) {
+                m_blocks[x][surfaceY + 1][z].type = BlockType::Diamond; // Very rare
+            } else if (oreNoise > 0.95f) {
+                m_blocks[x][surfaceY + 1][z].type = BlockType::Gold; // Rare
+            } else if (oreNoise > 0.90f) {
+                m_blocks[x][surfaceY + 1][z].type = BlockType::Iron; // Uncommon
+            } else if (oreNoise > 0.85f) {
+                m_blocks[x][surfaceY + 1][z].type = BlockType::Coal; // Common
+            }
+        }
+    }
+}
+
+// ============================================================================
+// TREE GENERATION
+// ============================================================================
+
+void Chunk::GenerateTrees(uint32_t seed) {
+    for (int x = 2; x < SIZE - 2; x++) {
+        for (int z = 2; z < SIZE - 2; z++) {
+            int surfaceY = FindSurfaceY(x, z);
+            
+            if (surfaceY < 0 || m_blocks[x][surfaceY][z].type != BlockType::Grass) continue;
+            
+            // Forest Clustering: Use low frequency noise to create "forest zones"
+            int worldX = m_chunkX * SIZE + x;
+            int worldZ = m_chunkZ * SIZE + z;
+            float forestNoise = noise2D(worldX / 20.0f, worldZ / 20.0f, seed + 9999);
+            
+            // Only spawn trees in forest zones (threshold 0.6)
+            if (forestNoise < 0.6f) continue;
+            
+            // Individual tree placement within forest (density check)
+            float treeNoise = noise2D(worldX, worldZ, seed + 5000);
+            if (treeNoise < 0.85f) continue; // 15% density within forests
+            
+            // Determine tree height (2, 3, or 4)
+            // Use a different noise or hash for height to be deterministic
+            float heightNoise = noise2D(worldX, worldZ, seed + 1234);
+            int trunkHeight = 3; // Default
+            if (heightNoise > 0.90f) trunkHeight = 4;      // Rare tall trees
+            else if (heightNoise < 0.30f) trunkHeight = 2; // Some short trees
+            
+            // Check vertical space
+            if (surfaceY + trunkHeight + 3 >= HEIGHT) continue;
+            
+            PlaceTree(x, surfaceY + 1, z, trunkHeight);
+        }
+    }
+}
+
+void Chunk::PlaceTree(int x, int baseY, int z, int trunkHeight) {
+    // Trunk
+    for (int y = 0; y < trunkHeight; y++) {
+        int trunkY = baseY + y;
+        if (IsValidPosition(x, trunkY, z) && trunkY < HEIGHT) {
+            m_blocks[x][trunkY][z].type = BlockType::Wood;
+        }
+    }
+    
+    // Leaves
+    // Layer 1: Around top of trunk (3x3)
+    // Layer 2: On top of trunk (cross shape or single block)
+    
+    int topY = baseY + trunkHeight; // The block ABOVE the last trunk block
+    
+    // 3x3 Leaf Cluster around the top trunk block (which is at topY - 1)
+    // Actually, let's put leaves starting at topY - 1 (surrounding top of trunk)
+    // and going up to topY + 1
+    
+    // Bottom Leaf Layer (surrounds top of trunk)
+    int bottomLeafY = topY - 1;
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dz = -1; dz <= 1; dz++) {
+            if (dx == 0 && dz == 0) continue; // Don't replace trunk
+            
+            if (IsValidPosition(x + dx, bottomLeafY, z + dz)) {
+                 if (m_blocks[x + dx][bottomLeafY][z + dz].type == BlockType::Air) {
+                    m_blocks[x + dx][bottomLeafY][z + dz].type = BlockType::Leaves;
+                 }
+            }
+        }
+    }
+    
+    // Top Leaf Layer (on top of trunk) - 3x3 but maybe corners missing for roundness?
+    // Let's do a full 3x3 on top, then a single one on very top?
+    // User said "one more leaf block on top".
+    // Let's do:
+    // Y-1: 3x3 ring around trunk
+    // Y: 3x3 layer on top of trunk (filling center)
+    // Y+1: Single block on top
+    
+    // Middle Leaf Layer (at topY)
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dz = -1; dz <= 1; dz++) {
+             // Skip corners for rounder look? Or keep full 3x3?
+             // Let's keep full 3x3 for now, it looks fuller
+            if (IsValidPosition(x + dx, topY, z + dz)) {
+                 if (m_blocks[x + dx][topY][z + dz].type == BlockType::Air) {
+                    m_blocks[x + dx][topY][z + dz].type = BlockType::Leaves;
+                 }
+            }
+        }
+    }
+    
+    // Very Top (Single block)
+    if (IsValidPosition(x, topY + 1, z)) {
+        m_blocks[x][topY + 1][z].type = BlockType::Leaves;
+    }
+}
+
+int Chunk::FindSurfaceY(int x, int z) const {
+    for (int y = HEIGHT - 1; y >= 0; y--) {
+        if (m_blocks[x][y][z].type != BlockType::Air && 
+            m_blocks[x][y][z].type != BlockType::Water) {
+            return y;
+        }
+    }
+    return -1;
+}
+
 } // namespace OreForged
+
 

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { VoxelRenderer } from './game/VoxelRenderer';
 import { bridge } from './engine/bridge';
-import { Input } from './components/Input';
-import { ProgressBar } from './components/ProgressBar';
-import { Slider } from './components/Slider';
-import Panel from './components/Panel';
+import { GameLayout } from './layouts/GameLayout';
+import { Input } from './oreui/Input';
+import { ProgressBar } from './oreui/ProgressBar';
+import { Slider } from './oreui/Slider';
+import Panel from './oreui/Panel';
 
 function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -82,9 +83,9 @@ function App() {
     };
 
     return (
-        <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-            <VoxelRenderer autoRotate={isRotating} rotationSpeed={rotationSpeed} />
-
+        <GameLayout
+            renderer={<VoxelRenderer autoRotate={isRotating} rotationSpeed={rotationSpeed} />}
+        >
             <div style={{
                 position: 'absolute',
                 top: '20px',
@@ -111,7 +112,8 @@ function App() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     zIndex: 2000,
-                    color: 'white'
+                    color: 'white',
+                    pointerEvents: 'auto'
                 }}>
                     <h2 style={{
                         fontFamily: '"Minecraft", "Press Start 2P", monospace',
@@ -134,7 +136,8 @@ function App() {
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    zIndex: 1000
+                    zIndex: 1000,
+                    pointerEvents: 'auto'
                 }}>
                     <div style={{
                         backgroundColor: '#3C3C3C',
@@ -289,7 +292,7 @@ function App() {
                     </div>
                 </div>
             )}
-        </div>
+        </GameLayout>
     );
 }
 

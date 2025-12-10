@@ -1,32 +1,30 @@
-# OreForged Documentation
+# OreForged documentation
 
 <p align="left">
   <img src="images/banner.png" alt="OreForged" width="300">
 </p>
 
-Welcome to the OreForged documentation! This guide will help you understand and use the OreUI framework.
+Documentation for the OreForged project and OreUI framework.
 
-## Quick Links
+## Documentation
 
 -   **[Architecture](ARCHITECTURE.md)** - System design and structure
 -   **[Data Binding](DATA_BINDING.md)** - C++ ↔ JavaScript communication
--   **[OreUI Guide](OREUI.md)** - Learn the Facet-based UI pattern
--   **[Component Library](COMPONENTS.md)** - Available UI components
+-   **[OreUI Guide](OREUI.md)** - Facet-based UI pattern
+-   **[Component Library](COMPONENTS.md)** - UI components
 
-## What is OreForged?
+## Overview
 
-OreForged is a high-performance C++ game engine demo that showcases **OreUI** - a React-based UI library inspired by Mojang's Bedrock Edition architecture.
+OreForged is a C++ game engine demo utilizing **OreUI**, a React-based UI library.
 
-### Key Features
+### Features
 
--   **Zero React Re-renders**: Direct DOM updates via Facets
--   **60 TPS Game Loop**: Smooth C++ game logic
--   **Two-Way Data Binding**: Efficient C++ ↔ JS communication
--   **Type-Safe**: Full TypeScript support
+-   **Direct DOM Mutation**: Updates bypass React reconciliation.
+-   **Fixed Tick Rate**: 60Hz C++ game loop.
+-   **Bidirectional Interop**: Synchronized state between C++ and JavaScript.
+-   **TypeScript**: Typed API bindings.
 
-## Getting Started
-
-### Installation
+## Setup
 
 ```bash
 git clone https://github.com/yourusername/Oreforged.git
@@ -34,7 +32,7 @@ cd Oreforged
 .\build.bat
 ```
 
-### Your First Component
+### Usage Example
 
 ```tsx
 import { remoteFacet } from "./engine/hooks";
@@ -49,11 +47,11 @@ function HealthBar() {
 }
 ```
 
-## Core Concepts
+## Concepts
 
 ### Facets
 
-Facets are observable values that can be updated without triggering React re-renders.
+Observable values updated without triggering React re-renders.
 
 ```tsx
 const tickCount = remoteFacet<number>("tick_count", 0);
@@ -61,45 +59,37 @@ const tickCount = remoteFacet<number>("tick_count", 0);
 
 ### Remote Facets
 
-Remote Facets connect to C++ game state:
+Connects to C++ game state.
 
+**C++**
 ```cpp
-// C++
 UpdateFacet("tick_count", std::to_string(m_state.tickCount));
 ```
 
+**React**
 ```tsx
-// React
 const tickCount = remoteFacet<number>("tick_count", 0);
 ```
 
 ### Fast Components
 
-Components that update the DOM directly:
+Components that update the DOM directly.
 
 ```tsx
 <FastDiv style={dynamicStyleFacet} />
 ```
 
-## The OreUI Philosophy
+## OreUI Design Pattern
 
-### 1. Facets All The Way Down
+1.  **Facets**: Pass Facets through the component tree. Do not unwrap values early.
+2.  **Direct Updates**: Use `fast-` components to bypass React reconciliation.
+3.  **Scope**: Use React for structure and events. Use Facets for dynamic data.
 
-Pass Facets through your component tree instead of unwrapping values early.
-
-### 2. Direct DOM Updates
-
-Use `fast-` components to bypass React reconciliation.
-
-### 3. Minimal React Surface Area
-
-Keep React for structure and events. Use Facets for dynamic data.
-
-## Documentation Structure
+## Directory Structure
 
 ```
 docs/
-├── README.md           # This file
+├── README.md          # Project root documentation
 ├── OREUI.md           # Facet pattern guide
 ├── DATA_BINDING.md    # C++ ↔ JS communication
 ├── COMPONENTS.md      # Component library
@@ -108,7 +98,7 @@ docs/
 
 ## Examples
 
-### Animated Element
+### Transformations
 
 ```tsx
 const tickCount = remoteFacet<number>("tick_count", 0);
@@ -123,7 +113,7 @@ const style = useFacetMap(
 <FastDiv style={style}>Animated!</FastDiv>;
 ```
 
-### Form with Validation
+### Input Handling
 
 ```tsx
 function LoginForm() {
@@ -147,12 +137,8 @@ function LoginForm() {
 
 ## Contributing
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
+See [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## License
 
-MIT License - see [LICENSE](../LICENSE)
-
----
-
-**Need help?** Open an issue or discussion on GitHub!
+MIT License - see [LICENSE](../LICENSE).

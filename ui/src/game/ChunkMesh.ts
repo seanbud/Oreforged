@@ -215,6 +215,33 @@ export class ChunkMesh {
 
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
         geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+
+        // Add Barycentric coordinates for wireframe shader
+        const centers: number[] = [];
+        // For each quad (2 triangles, 4 vertices), we need to add barycentric coords
+        // We are processing 4 vertices at a time (Quad)
+        for (let i = 0; i < vertices.length / 3; i += 4) {
+            // Quad vertices: 0, 1, 2, 3
+            // Triangle 1: 0, 1, 2 -> (1,0,0), (0,1,0), (0,0,1)
+            // Triangle 2: 0, 2, 3 -> (1,0,0), (0,0,1), (0,1,0)
+            // But wait, our index buffer is:
+            // vertexCount, vertexCount + 1, vertexCount + 2,
+            // vertexCount, vertexCount + 2, vertexCount + 3
+            // So we just need to assign 1,0,0 etc to the vertices themselves.
+            // Actually, for a quad to have a border, we can't just use barycentric of triangles because the diagonal edge will show up.
+            // A better way for quads is to use a specific attribute that marks the UV or local position relative to the face.
+            // But since we have UVs, we can just use UVs!
+            // Our UVs are 0..0.25 on the atlas.
+            // We can pass a separate attribute 'localUV' that is always 0..1 for the face.
+            centers.push(
+                0, 0, // BL
+                1, 0, // BR
+                1, 1, // TR
+                0, 1  // TL
+            );
+        }
+        geometry.setAttribute('localUV', new THREE.Float32BufferAttribute(centers, 2));
+
         geometry.setIndex(indices);
         geometry.computeVertexNormals();
 

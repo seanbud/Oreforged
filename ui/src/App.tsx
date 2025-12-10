@@ -14,6 +14,10 @@ function App() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [progress, setProgress] = useState(0);
 
+    // Rendering settings
+    const [showEdges, setShowEdges] = useState(true);
+    const [edgeIntensity, setEdgeIntensity] = useState(0.5);
+
     useEffect(() => {
         console.log('App mounted, checking uiReady');
         let attempts = 0;
@@ -83,7 +87,10 @@ function App() {
 
     return (
         <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-            <VoxelRenderer autoRotate={isRotating} rotationSpeed={rotationSpeed} />
+            <VoxelRenderer
+                autoRotate={isRotating}
+                rotationSpeed={rotationSpeed}
+            />
 
             <div style={{
                 position: 'absolute',
@@ -223,11 +230,44 @@ function App() {
                                 {isRotating && (
                                     <Slider
                                         label="Rotation Speed"
-                                        min={-2}
-                                        max={2}
-                                        step={0.1}
+                                        min={-0.2}
+                                        max={0.2}
+                                        step={0.01}
                                         value={rotationSpeed}
                                         onChange={(e) => setRotationSpeed(parseFloat(e.target.value))}
+                                    />
+                                )}
+                            </div>
+
+                            <div style={{ marginTop: '16px', borderTop: '2px solid #000', paddingTop: '16px' }}>
+                                <label style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    cursor: 'pointer',
+                                    marginBottom: '12px',
+                                    fontFamily: '"Minecraft", monospace',
+                                    fontSize: '14px',
+                                    color: '#fff',
+                                    textShadow: '2px 2px 0px #000'
+                                }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={showEdges}
+                                        onChange={(e) => setShowEdges(e.target.checked)}
+                                        style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                                    />
+                                    Show Block Edges
+                                </label>
+
+                                {showEdges && (
+                                    <Slider
+                                        label="Edge Intensity"
+                                        min={0}
+                                        max={1}
+                                        step={0.1}
+                                        value={edgeIntensity}
+                                        onChange={(e) => setEdgeIntensity(parseFloat(e.target.value))}
                                     />
                                 )}
                             </div>

@@ -326,6 +326,10 @@ export class ChunkMesh {
 
         this.mesh = new THREE.Mesh(geometry, material);
 
+        // Enable shadows
+        this.mesh.castShadow = true;
+        this.mesh.receiveShadow = true;
+
         // Position chunk in world space
         this.mesh.position.set(chunkData.chunkX * size, 0, chunkData.chunkZ * size);
 

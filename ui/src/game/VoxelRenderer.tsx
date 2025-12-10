@@ -18,7 +18,7 @@ export function VoxelRenderer({
     const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
     const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
     const chunksRef = useRef<Map<string, ChunkMesh>>(new Map());
-    const materialRef = useRef<THREE.ShaderMaterial | null>(null);
+    const materialRef = useRef<THREE.Material | null>(null);
     const rotationRef = useRef(0);
     const autoRotateRef = useRef(autoRotate);
     const rotationSpeedRef = useRef(rotationSpeed);
@@ -51,7 +51,7 @@ export function VoxelRenderer({
         // Set an initial position that mimics the isometric look but in perspective
         // Diablo Style: Steep angle (~60 deg), Narrow FOV, High distance
         const cameraTarget = new THREE.Vector3(0, 0, 0);
-        camera.position.set(80, 75, 80);
+        camera.position.set(80, 100, 80);
         camera.lookAt(cameraTarget);
         cameraRef.current = camera;
 
@@ -61,6 +61,7 @@ export function VoxelRenderer({
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
         renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         containerRef.current.appendChild(renderer.domElement);
         rendererRef.current = renderer;
 
@@ -70,9 +71,21 @@ export function VoxelRenderer({
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.8);
         directionalLight.position.set(50, 100, 50);
         directionalLight.castShadow = true;
+
+        // Configure shadow properties
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 500;
+        directionalLight.shadow.camera.left = -100;
+        directionalLight.shadow.camera.right = 100;
+        directionalLight.shadow.camera.top = 100;
+        directionalLight.shadow.camera.bottom = -100;
+        directionalLight.shadow.bias = -0.0001;
+
         scene.add(directionalLight);
 
         // Camera controls state
@@ -271,54 +284,47 @@ export function VoxelRenderer({
         // Add distance fog for atmospheric fade (lighter, more majestic)
         scene.fog = new THREE.FogExp2(0xd4e9f7, 0.0015);
 
-        // Stylized shader with soft lighting, dithered AO, and vertex wobble
-        const material = new THREE.ShaderMaterial({
-            uniforms: {
-                map: { value: texture },
-                sunDirection: { value: new THREE.Vector3(0.5, 0.8, 0.2).normalize() },
-                ambientLight: { value: 0.75 },
-                diffuseStrength: { value: 0.6 },
-                fogColor: { value: new THREE.Color(0xd4e9f7) },
-                fogDensity: { value: 0.0015 },
-                godRayIntensity: { value: 0.15 },
-                time: { value: 0.0 }
-            },
-            vertexShader: `
-                varying vec2 vUv;
-                varying vec3 vNormal;
-                varying vec3 vWorldPos;
-                varying float vAo;
+        // MeshStandardMaterial with custom shader injection for stylized effects + shadows
+        const material = new THREE.MeshStandardMaterial({
+            map: texture,
+            transparent: true,
+            side: THREE.DoubleSide,
+            roughness: 0.9,
+            metalness: 0.1
+        });
+
+        // Inject our custom stylized effects into the standard material
+        material.onBeforeCompile = (shader) => {
+            // Add custom uniforms
+            shader.uniforms.fogDensityCustom = { value: 0.0015 };
+            shader.uniforms.godRayIntensity = { value: 0.15 };
+
+            // Add AO attribute
+            shader.vertexShader = shader.vertexShader.replace(
+                '#include <common>',
+                `#include <common>
                 attribute float ao;
-                
-                void main() {
-                    vUv = uv;
-                    vNormal = normalize(normalMatrix * normal);
-                    
-                    // Calculate world position for fog and effects
-                    vec4 worldPos = modelMatrix * vec4(position, 1.0);
-                    vWorldPos = worldPos.xyz;
-                    
-                    // Pass AO to fragment shader
-                    vAo = ao;
-                    
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-            `,
-            fragmentShader: `
-                uniform sampler2D map;
-                uniform vec3 sunDirection;
-                uniform float ambientLight;
-                uniform float diffuseStrength;
-                uniform vec3 fogColor;
-                uniform float fogDensity;
+                varying float vAo;
+                varying vec3 vWorldPos;`
+            );
+
+            shader.vertexShader = shader.vertexShader.replace(
+                '#include <worldpos_vertex>',
+                `#include <worldpos_vertex>
+                vAo = ao;
+                vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;`
+            );
+
+            // Inject custom fragment shader code
+            shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <common>',
+                `#include <common>
+                varying float vAo;
+                varying vec3 vWorldPos;
+                uniform float fogDensityCustom;
                 uniform float godRayIntensity;
                 
-                varying vec2 vUv;
-                varying vec3 vNormal;
-                varying vec3 vWorldPos;
-                varying float vAo;
-                
-                // Simple dither pattern for colored shadows
+                // Dither pattern for stylized AO
                 float dither4x4(vec2 position, float brightness) {
                     int x = int(mod(position.x, 4.0));
                     int y = int(mod(position.y, 4.0));
@@ -343,67 +349,35 @@ export function VoxelRenderer({
                     if (index == 15) limit = 0.375;
                     
                     return brightness < limit ? 0.0 : 1.0;
-                }
+                }`
+            );
+
+            // Apply dithered AO and stylized effects before final output
+            shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <dithering_fragment>',
+                `#include <dithering_fragment>
                 
-                void main() {
-                    vec4 texColor = texture2D(map, vUv);
-                    
-                    // Wrapped diffuse (Half-Lambert) for softer lighting
-                    float NdotL = dot(vNormal, sunDirection);
-                    float wrappedDiffuse = pow(NdotL * 0.5 + 0.5, 1.5);
-                    
-                    // Combine ambient + wrapped diffuse
-                    float light = ambientLight + wrappedDiffuse * diffuseStrength;
-                    
-                    // Colored dithered AO - use cool purple/blue for shadows
-                    float aoFactor = vAo;
-                    float ditherPattern = dither4x4(gl_FragCoord.xy, aoFactor);
-                    vec3 shadowColor = vec3(0.4, 0.5, 0.7); // Cool blue-purple tint
-                    vec3 aoTint = mix(shadowColor, vec3(1.0), ditherPattern);
-                    
-                    // Wandering highlights with color variation
-                    float highlightNoise = fract(sin(dot(vWorldPos.xz, vec2(12.9898, 78.233))) * 43758.5453);
-                    vec3 highlightColor = vec3(1.0 + highlightNoise * 0.2, 0.95 + highlightNoise * 0.15, 0.85);
-                    float highlightStrength = pow(max(0.0, NdotL), 8.0) * 0.3;
-                    
-                    vec3 finalColor = texColor.rgb * light * aoTint;
-                    finalColor += highlightColor * highlightStrength;
-                    
-                    // Bloom where sun hits the ground (Y-facing surfaces)
-                    float isGroundFacing = max(0.0, vNormal.y);
-                    float bloomStrength = pow(wrappedDiffuse, 2.0) * isGroundFacing * 0.25;
-                    finalColor += vec3(bloomStrength * 1.2, bloomStrength * 1.1, bloomStrength * 0.9);
-                    
-                    // Water reflections (detect water by checking if material is bluish)
-                    bool isWater = texColor.b > texColor.r && texColor.b > texColor.g && texColor.b > 0.5;
-                    if (isWater) {
-                        // Simple specular reflection
-                        vec3 viewDir = normalize(cameraPosition - vWorldPos);
-                        vec3 reflectDir = reflect(-sunDirection, vNormal);
-                        float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16.0);
-                        finalColor += vec3(spec * 0.6, spec * 0.7, spec * 0.8);
-                    }
-                    
-                    // Distance fog
-                    float dist = length(vWorldPos - cameraPosition);
-                    float fogFactor = 1.0 - exp(-fogDensity * fogDensity * dist * dist);
-                    fogFactor = clamp(fogFactor, 0.0, 1.0);
-                    finalColor = mix(finalColor, fogColor, fogFactor);
-                    
-                    // Simple god rays (glow towards sun)
-                    vec3 viewDir = normalize(cameraPosition - vWorldPos);
-                    float sunAlignment = max(0.0, dot(viewDir, sunDirection));
-                    float godRay = pow(sunAlignment, 4.0) * godRayIntensity * fogFactor;
-                    finalColor += vec3(godRay * 1.2, godRay * 1.1, godRay * 0.9);
-                    
-                    gl_FragColor = vec4(finalColor, texColor.a);
-                    
-                    if (texColor.a < 0.1) discard;
-                }
-            `,
-            transparent: true,
-            side: THREE.DoubleSide
-        });
+                // Apply dithered AO
+                float aoFactor = vAo;
+                float ditherPattern = dither4x4(gl_FragCoord.xy, aoFactor);
+                vec3 shadowColor = vec3(0.7, 0.75, 0.85);
+                vec3 aoTint = mix(shadowColor, vec3(1.0), ditherPattern);
+                gl_FragColor.rgb *= aoTint;
+                
+                // Wandering highlights
+                float highlightNoise = fract(sin(dot(vWorldPos.xz, vec2(12.9898, 78.233))) * 43758.5453);
+                vec3 highlightColor = vec3(1.0 + highlightNoise * 0.15, 0.98 + highlightNoise * 0.1, 0.9);
+                float highlightStrength = pow(max(0.0, dot(vNormal, vec3(0.5, 0.8, 0.2))), 12.0) * 0.2;
+                gl_FragColor.rgb += highlightColor * highlightStrength;
+                
+                // God rays
+                vec3 viewDir = normalize(cameraPosition - vWorldPos);
+                float sunAlignment = max(0.0, dot(viewDir, vec3(0.5, 0.8, 0.2)));
+                float godRay = pow(sunAlignment, 4.0) * godRayIntensity;
+                gl_FragColor.rgb += vec3(godRay * 1.2, godRay * 1.1, godRay * 0.9);`
+            );
+        };
+
         materialRef.current = material;
 
         // Handle window resize

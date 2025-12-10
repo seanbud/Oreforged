@@ -15,7 +15,7 @@ export function VoxelRenderer({
 }: VoxelRendererProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const sceneRef = useRef<THREE.Scene | null>(null);
-    const cameraRef = useRef<THREE.OrthographicCamera | null>(null);
+    const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
     const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
     const chunksRef = useRef<Map<string, ChunkMesh>>(new Map());
     const materialRef = useRef<THREE.ShaderMaterial | null>(null);
@@ -43,17 +43,16 @@ export function VoxelRenderer({
         scene.background = new THREE.Color(0x87ceeb); // Sky blue
         sceneRef.current = scene;
 
-        // Camera - Isometric style (Orthographic)
+        // Camera - Perspective
         const aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
-        const d = 40;
-        const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 0.1, 1000);
+        const camera = new THREE.PerspectiveCamera(30, aspect, 0.1, 1000);
 
         // Start centered on map origin (0, 0, 0)
+        // Set an initial position that mimics the isometric look but in perspective
+        // Diablo Style: Steep angle (~60 deg), Narrow FOV, High distance
         const cameraTarget = new THREE.Vector3(0, 0, 0);
-        camera.position.set(200, 175, 200);
+        camera.position.set(80, 75, 80);
         camera.lookAt(cameraTarget);
-        camera.zoom = 1.5;
-        camera.updateProjectionMatrix();
         cameraRef.current = camera;
 
         console.log('Camera positioned at:', camera.position);
@@ -83,16 +82,26 @@ export function VoxelRenderer({
         const velocity = { x: 0, z: 0 }; // Current momentum velocity
         const velocityHistory: { x: number, z: number }[] = []; // Rolling history for smooth release
         let lastMoveTime = 0;
-        const zoomSpeed = 0.1;
         const rotateSpeed = 0.005;
         const friction = 0.95; // More slippery for "buttery" feel
 
-        // Mouse wheel zoom
+        // Mouse wheel zoom (Dolly)
         const handleWheel = (e: WheelEvent) => {
             e.preventDefault();
-            const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
-            camera.zoom = Math.max(0.5, Math.min(5, camera.zoom + delta));
-            camera.updateProjectionMatrix();
+            const delta = e.deltaY > 0 ? 1 : -1;
+
+            // Vector from target to camera
+            const offset = new THREE.Vector3().subVectors(camera.position, cameraTarget);
+            const dist = offset.length();
+
+            // Limit zoom distance
+            if (delta > 0 && dist < 400) {
+                offset.multiplyScalar(1.1); // Zoom out
+            } else if (delta < 0 && dist > 20) {
+                offset.multiplyScalar(0.9); // Zoom in
+            }
+
+            camera.position.copy(cameraTarget).add(offset);
         };
 
         // Mouse down - detect left or right click
@@ -129,16 +138,25 @@ export function VoxelRenderer({
             const deltaY = e.clientY - previousMousePosition.y;
 
             if (isPanning) {
-                // Analytic Panning (Zero Jitter)
-                const viewHeight = (camera.top - camera.bottom) / camera.zoom;
-                const viewWidth = (camera.right - camera.left) / camera.zoom;
+                // Analytic Panning for Perspective
+                // Calculate units per pixel at the target distance
+                const dist = camera.position.distanceTo(cameraTarget);
+                const vFOV = THREE.MathUtils.degToRad(camera.fov);
+                const visibleHeight = 2 * Math.tan(vFOV / 2) * dist;
+                const visibleWidth = visibleHeight * camera.aspect;
+
                 const rect = renderer.domElement.getBoundingClientRect();
-                const unitsPerPixelX = viewWidth / rect.width;
-                const unitsPerPixelY = viewHeight / rect.height;
+                const unitsPerPixelX = visibleWidth / rect.width;
+                const unitsPerPixelY = visibleHeight / rect.height;
 
                 // Analytic Panning using Camera Basis Vectors
                 const forward = new THREE.Vector3();
                 camera.getWorldDirection(forward);
+
+                // Calculate pitch factor for vertical drag correctness
+                const pitch = Math.abs(forward.y);
+                const groundFactor = pitch < 0.1 ? 10 : 1 / pitch;
+
                 forward.y = 0;
                 forward.normalize();
 
@@ -146,7 +164,7 @@ export function VoxelRenderer({
                 right.crossVectors(forward, new THREE.Vector3(0, 1, 0));
 
                 const moveX = -deltaX * unitsPerPixelX;
-                const moveZ = deltaY * unitsPerPixelY * 1.7; // Vertical foreshortening factor
+                const moveZ = deltaY * unitsPerPixelY * groundFactor;
 
                 const moveVec = new THREE.Vector3();
                 moveVec.addScaledVector(right, moveX);
@@ -154,12 +172,14 @@ export function VoxelRenderer({
 
                 camera.position.add(moveVec);
                 cameraTarget.add(moveVec);
-                camera.lookAt(cameraTarget);
+                // No need to call camera.lookAt here because simple translation preserves orientation
+                // But if we want to ensure floating point drift doesn't happen:
+                // camera.lookAt(cameraTarget); // Actually, cameraTarget moved same amount, so relative orientation is identical.
 
+                // Add to history for smoothing
                 const worldDx = moveVec.x;
                 const worldDz = moveVec.z;
 
-                // Add to history for smoothing
                 velocityHistory.push({ x: worldDx, z: worldDz });
                 if (velocityHistory.length > 5) velocityHistory.shift();
                 lastMoveTime = Date.now();
@@ -275,11 +295,7 @@ export function VoxelRenderer({
         // Handle window resize
         const handleResize = () => {
             if (!camera || !renderer || !containerRef.current) return;
-            const aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
-            camera.left = -d * aspect;
-            camera.right = d * aspect;
-            camera.top = d;
-            camera.bottom = -d;
+            camera.aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
         };
@@ -296,7 +312,9 @@ export function VoxelRenderer({
                 camera.position.z += velocity.z;
                 cameraTarget.x += velocity.x;
                 cameraTarget.z += velocity.z;
-                camera.lookAt(cameraTarget);
+
+                // Keep looking at target
+                // camera.lookAt(cameraTarget); 
 
                 // Apply friction
                 velocity.x *= friction;

@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { VoxelRenderer } from './game/VoxelRenderer';
 import { bridge } from './engine/bridge';
-import { GameLayout } from './layouts/GameLayout';
-import { Input } from './oreui/Input';
-import { ProgressBar } from './oreui/ProgressBar';
-import { Slider } from './oreui/Slider';
-import Panel from './oreui/Panel';
+import { Input } from './components/Input';
+import { ProgressBar } from './components/ProgressBar';
+import { Slider } from './components/Slider';
+import Panel from './components/Panel';
 
 function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -14,6 +13,10 @@ function App() {
     const [rotationSpeed, setRotationSpeed] = useState(0);
     const [isGenerating, setIsGenerating] = useState(false);
     const [progress, setProgress] = useState(0);
+
+    // Rendering settings
+    const [showEdges, setShowEdges] = useState(true);
+    const [edgeIntensity, setEdgeIntensity] = useState(0.5);
 
     useEffect(() => {
         console.log('App mounted, checking uiReady');
@@ -83,9 +86,12 @@ function App() {
     };
 
     return (
-        <GameLayout
-            renderer={<VoxelRenderer autoRotate={isRotating} rotationSpeed={rotationSpeed} />}
-        >
+        <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+            <VoxelRenderer
+                autoRotate={isRotating}
+                rotationSpeed={rotationSpeed}
+            />
+
             <div style={{
                 position: 'absolute',
                 top: '20px',
@@ -112,8 +118,7 @@ function App() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     zIndex: 2000,
-                    color: 'white',
-                    pointerEvents: 'auto'
+                    color: 'white'
                 }}>
                     <h2 style={{
                         fontFamily: '"Minecraft", "Press Start 2P", monospace',
@@ -136,8 +141,7 @@ function App() {
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    zIndex: 1000,
-                    pointerEvents: 'auto'
+                    zIndex: 1000
                 }}>
                     <div style={{
                         backgroundColor: '#3C3C3C',
@@ -226,11 +230,44 @@ function App() {
                                 {isRotating && (
                                     <Slider
                                         label="Rotation Speed"
-                                        min={-2}
-                                        max={2}
-                                        step={0.1}
+                                        min={-0.2}
+                                        max={0.2}
+                                        step={0.01}
                                         value={rotationSpeed}
                                         onChange={(e) => setRotationSpeed(parseFloat(e.target.value))}
+                                    />
+                                )}
+                            </div>
+
+                            <div style={{ marginTop: '16px', borderTop: '2px solid #000', paddingTop: '16px' }}>
+                                <label style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                    cursor: 'pointer',
+                                    marginBottom: '12px',
+                                    fontFamily: '"Minecraft", monospace',
+                                    fontSize: '14px',
+                                    color: '#fff',
+                                    textShadow: '2px 2px 0px #000'
+                                }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={showEdges}
+                                        onChange={(e) => setShowEdges(e.target.checked)}
+                                        style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                                    />
+                                    Show Block Edges
+                                </label>
+
+                                {showEdges && (
+                                    <Slider
+                                        label="Edge Intensity"
+                                        min={0}
+                                        max={1}
+                                        step={0.1}
+                                        value={edgeIntensity}
+                                        onChange={(e) => setEdgeIntensity(parseFloat(e.target.value))}
                                     />
                                 )}
                             </div>
@@ -292,7 +329,7 @@ function App() {
                     </div>
                 </div>
             )}
-        </GameLayout>
+        </div>
     );
 }
 

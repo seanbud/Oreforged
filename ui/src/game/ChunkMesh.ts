@@ -216,6 +216,85 @@ export class ChunkMesh {
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
         geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
 
+
+        // Calculate Ambient Occlusion for each vertex
+        const aoValues: number[] = [];
+
+        // Helper to calculate AO for a single vertex
+        const calculateVertexAO = (x: number, y: number, z: number, face: any): number => {
+            const [dx, dy, dz] = face.dir;
+
+            // For each vertex, check 3 neighbors: side1, side2, corner
+            // This is a simplified AO - just checking if blocks are present
+            // Returns 0.0 (full occlusion) to 1.0 (no occlusion)
+
+            // Get tangent and bitangent for this face
+            let side1 = [0, 0, 0];
+            let side2 = [0, 0, 0];
+
+            if (Math.abs(dx) > 0) {
+                // Face is along X axis
+                side1 = [0, 1, 0]; // Y
+                side2 = [0, 0, 1]; // Z
+            } else if (Math.abs(dy) > 0) {
+                // Face is along Y axis  
+                side1 = [1, 0, 0]; // X
+                side2 = [0, 0, 1]; // Z
+            } else {
+                // Face is along Z axis
+                side1 = [1, 0, 0]; // X
+                side2 = [0, 1, 0]; // Y
+            }
+
+            // Sample 3 blocks around this vertex on the face
+            const s1 = getBlock(x + dx + side1[0], y + dy + side1[1], z + dz + side1[2]);
+            const s2 = getBlock(x + dx + side2[0], y + dy + side2[1], z + dz + side2[2]);
+            const corner = getBlock(x + dx + side1[0] + side2[0], y + dy + side1[1] + side2[1], z + dz + side1[2] + side2[2]);
+
+            // Count occlusion: 0 = air, >0 = solid
+            let occlusion = 0;
+            if (s1 > 0) occlusion++;
+            if (s2 > 0) occlusion++;
+            if (corner > 0 && (s1 > 0 || s2 > 0)) occlusion++; // Corner only counts if at least one side is occluded
+
+            // Map 0-3 occlusion to 1.0-0.3 brightness
+            return 1.0 - (occlusion * 0.23);
+        };
+
+        // Recalculate AO for each face that was added
+        for (let y = 0; y < height; y++) {
+            for (let z = 0; z < size; z++) {
+                for (let x = 0; x < size; x++) {
+                    const blockType = getBlock(x, y, z);
+                    if (blockType === 0) continue;
+
+                    const faces = [
+                        { dir: [0, 1, 0], vertices: [[0, 1, 0], [1, 1, 0], [1, 1, 1], [0, 1, 1]] },
+                        { dir: [0, -1, 0], vertices: [[0, 0, 0], [0, 0, 1], [1, 0, 1], [1, 0, 0]] },
+                        { dir: [0, 0, 1], vertices: [[0, 0, 1], [0, 1, 1], [1, 1, 1], [1, 0, 1]] },
+                        { dir: [0, 0, -1], vertices: [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]] },
+                        { dir: [1, 0, 0], vertices: [[1, 0, 0], [1, 0, 1], [1, 1, 1], [1, 1, 0]] },
+                        { dir: [-1, 0, 0], vertices: [[0, 0, 0], [0, 1, 0], [0, 1, 1], [0, 0, 1]] },
+                    ];
+
+                    for (const face of faces) {
+                        const [dx, dy, dz] = face.dir;
+                        const neighborType = getBlock(x + dx, y + dy, z + dz);
+
+                        if (isTransparent(neighborType)) {
+                            // This face was added - calculate AO for its 4 vertices
+                            for (const [vx, vy, vz] of face.vertices) {
+                                const ao = calculateVertexAO(x + vx, y + vy, z + vz, face);
+                                aoValues.push(ao);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        geometry.setAttribute('ao', new THREE.Float32BufferAttribute(aoValues, 1));
+
         // Add Barycentric coordinates for wireframe shader
         const centers: number[] = [];
         // For each quad (2 triangles, 4 vertices), we need to add barycentric coords

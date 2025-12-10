@@ -78,11 +78,13 @@ export function VoxelRenderer({
         // Camera controls state
         let isPanning = false;
         let isRotating = false;
+        let isPitching = false;
         let previousMousePosition = { x: 0, y: 0 };
         const velocity = { x: 0, z: 0 }; // Current momentum velocity
         const velocityHistory: { x: number, z: number }[] = []; // Rolling history for smooth release
         let lastMoveTime = 0;
         const rotateSpeed = 0.005;
+        const pitchSpeed = 0.003;
         const friction = 0.95; // More slippery for "buttery" feel
 
         // Mouse wheel zoom (Dolly)
@@ -115,16 +117,22 @@ export function VoxelRenderer({
 
             if (e.button === 0) { // Left click - pan
                 isPanning = true;
-            } else if (e.button === 2) { // Right click - rotate
-                isRotating = true;
+            } else if (e.button === 2) { // Right click - rotate or pitch
+                if (e.ctrlKey) {
+                    // Ctrl + Right Click = Pitch (vertical angle)
+                    isPitching = true;
+                } else {
+                    // Right Click = Rotate (horizontal)
+                    isRotating = true;
 
-                // Set rotation pivot to center of screen (Analytic raycast to y=0)
-                const raycaster = new THREE.Raycaster();
-                raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-                const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-                const intersection = new THREE.Vector3();
-                if (raycaster.ray.intersectPlane(groundPlane, intersection)) {
-                    cameraTarget.copy(intersection);
+                    // Set rotation pivot to center of screen (Analytic raycast to y=0)
+                    const raycaster = new THREE.Raycaster();
+                    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+                    const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+                    const intersection = new THREE.Vector3();
+                    if (raycaster.ray.intersectPlane(groundPlane, intersection)) {
+                        cameraTarget.copy(intersection);
+                    }
                 }
             }
             previousMousePosition = { x: e.clientX, y: e.clientY };
@@ -197,6 +205,21 @@ export function VoxelRenderer({
                 camera.position.x = cameraTarget.x + newOffsetX;
                 camera.position.z = cameraTarget.z + newOffsetZ;
                 camera.lookAt(cameraTarget);
+            } else if (isPitching) {
+                // Adjust vertical angle (pitch)
+                const pitchDelta = -deltaY * pitchSpeed;
+
+                // Get current offset
+                const offset = new THREE.Vector3().subVectors(camera.position, cameraTarget);
+                const horizontalDist = Math.sqrt(offset.x * offset.x + offset.z * offset.z);
+
+                // Calculate new Y based on pitch change
+                const currentPitch = Math.atan2(offset.y, horizontalDist);
+                const newPitch = Math.max(0.1, Math.min(Math.PI / 2 - 0.1, currentPitch + pitchDelta));
+
+                // Update camera Y position
+                camera.position.y = cameraTarget.y + horizontalDist * Math.tan(newPitch);
+                camera.lookAt(cameraTarget);
             }
 
             previousMousePosition = { x: e.clientX, y: e.clientY };
@@ -205,6 +228,7 @@ export function VoxelRenderer({
         const handleMouseUp = () => {
             isPanning = false;
             isRotating = false;
+            isPitching = false;
 
             // Calculate rolling average velocity if recently moved
             if (Date.now() - lastMoveTime < 50 && velocityHistory.length > 0) {
@@ -244,20 +268,39 @@ export function VoxelRenderer({
         texture.minFilter = THREE.NearestFilter;
         texture.colorSpace = THREE.SRGBColorSpace;
 
-        // Simple bright shader (closer to original MeshLambertMaterial)
+        // Add distance fog for atmospheric fade (lighter, more majestic)
+        scene.fog = new THREE.FogExp2(0xd4e9f7, 0.0015);
+
+        // Stylized shader with soft lighting, dithered AO, and vertex wobble
         const material = new THREE.ShaderMaterial({
             uniforms: {
                 map: { value: texture },
                 sunDirection: { value: new THREE.Vector3(0.5, 0.8, 0.2).normalize() },
-                ambientLight: { value: 0.8 },
-                diffuseStrength: { value: 0.4 }
+                ambientLight: { value: 0.75 },
+                diffuseStrength: { value: 0.6 },
+                fogColor: { value: new THREE.Color(0xd4e9f7) },
+                fogDensity: { value: 0.0015 },
+                godRayIntensity: { value: 0.15 },
+                time: { value: 0.0 }
             },
             vertexShader: `
                 varying vec2 vUv;
                 varying vec3 vNormal;
+                varying vec3 vWorldPos;
+                varying float vAo;
+                attribute float ao;
+                
                 void main() {
                     vUv = uv;
                     vNormal = normalize(normalMatrix * normal);
+                    
+                    // Calculate world position for fog and effects
+                    vec4 worldPos = modelMatrix * vec4(position, 1.0);
+                    vWorldPos = worldPos.xyz;
+                    
+                    // Pass AO to fragment shader
+                    vAo = ao;
+                    
                     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                 }
             `,
@@ -266,21 +309,92 @@ export function VoxelRenderer({
                 uniform vec3 sunDirection;
                 uniform float ambientLight;
                 uniform float diffuseStrength;
-
+                uniform vec3 fogColor;
+                uniform float fogDensity;
+                uniform float godRayIntensity;
+                
                 varying vec2 vUv;
                 varying vec3 vNormal;
-
+                varying vec3 vWorldPos;
+                varying float vAo;
+                
+                // Simple dither pattern for colored shadows
+                float dither4x4(vec2 position, float brightness) {
+                    int x = int(mod(position.x, 4.0));
+                    int y = int(mod(position.y, 4.0));
+                    int index = x + y * 4;
+                    float limit = 0.0;
+                    
+                    if (index == 0) limit = 0.0625;
+                    if (index == 1) limit = 0.5625;
+                    if (index == 2) limit = 0.1875;
+                    if (index == 3) limit = 0.6875;
+                    if (index == 4) limit = 0.8125;
+                    if (index == 5) limit = 0.3125;
+                    if (index == 6) limit = 0.9375;
+                    if (index == 7) limit = 0.4375;
+                    if (index == 8) limit = 0.25;
+                    if (index == 9) limit = 0.75;
+                    if (index == 10) limit = 0.125;
+                    if (index == 11) limit = 0.625;
+                    if (index == 12) limit = 1.0;
+                    if (index == 13) limit = 0.5;
+                    if (index == 14) limit = 0.875;
+                    if (index == 15) limit = 0.375;
+                    
+                    return brightness < limit ? 0.0 : 1.0;
+                }
+                
                 void main() {
                     vec4 texColor = texture2D(map, vUv);
                     
-                    // Simple Lambert lighting like the original
-                    float diffuse = max(dot(vNormal, sunDirection), 0.0);
+                    // Wrapped diffuse (Half-Lambert) for softer lighting
+                    float NdotL = dot(vNormal, sunDirection);
+                    float wrappedDiffuse = pow(NdotL * 0.5 + 0.5, 1.5);
                     
-                    // Combine ambient + diffuse (very bright)
-                    float light = ambientLight + diffuse * diffuseStrength;
-                    light = clamp(light, 0.0, 1.0);
+                    // Combine ambient + wrapped diffuse
+                    float light = ambientLight + wrappedDiffuse * diffuseStrength;
                     
-                    vec3 finalColor = texColor.rgb * light;
+                    // Colored dithered AO - use cool purple/blue for shadows
+                    float aoFactor = vAo;
+                    float ditherPattern = dither4x4(gl_FragCoord.xy, aoFactor);
+                    vec3 shadowColor = vec3(0.4, 0.5, 0.7); // Cool blue-purple tint
+                    vec3 aoTint = mix(shadowColor, vec3(1.0), ditherPattern);
+                    
+                    // Wandering highlights with color variation
+                    float highlightNoise = fract(sin(dot(vWorldPos.xz, vec2(12.9898, 78.233))) * 43758.5453);
+                    vec3 highlightColor = vec3(1.0 + highlightNoise * 0.2, 0.95 + highlightNoise * 0.15, 0.85);
+                    float highlightStrength = pow(max(0.0, NdotL), 8.0) * 0.3;
+                    
+                    vec3 finalColor = texColor.rgb * light * aoTint;
+                    finalColor += highlightColor * highlightStrength;
+                    
+                    // Bloom where sun hits the ground (Y-facing surfaces)
+                    float isGroundFacing = max(0.0, vNormal.y);
+                    float bloomStrength = pow(wrappedDiffuse, 2.0) * isGroundFacing * 0.25;
+                    finalColor += vec3(bloomStrength * 1.2, bloomStrength * 1.1, bloomStrength * 0.9);
+                    
+                    // Water reflections (detect water by checking if material is bluish)
+                    bool isWater = texColor.b > texColor.r && texColor.b > texColor.g && texColor.b > 0.5;
+                    if (isWater) {
+                        // Simple specular reflection
+                        vec3 viewDir = normalize(cameraPosition - vWorldPos);
+                        vec3 reflectDir = reflect(-sunDirection, vNormal);
+                        float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16.0);
+                        finalColor += vec3(spec * 0.6, spec * 0.7, spec * 0.8);
+                    }
+                    
+                    // Distance fog
+                    float dist = length(vWorldPos - cameraPosition);
+                    float fogFactor = 1.0 - exp(-fogDensity * fogDensity * dist * dist);
+                    fogFactor = clamp(fogFactor, 0.0, 1.0);
+                    finalColor = mix(finalColor, fogColor, fogFactor);
+                    
+                    // Simple god rays (glow towards sun)
+                    vec3 viewDir = normalize(cameraPosition - vWorldPos);
+                    float sunAlignment = max(0.0, dot(viewDir, sunDirection));
+                    float godRay = pow(sunAlignment, 4.0) * godRayIntensity * fogFactor;
+                    finalColor += vec3(godRay * 1.2, godRay * 1.1, godRay * 0.9);
                     
                     gl_FragColor = vec4(finalColor, texColor.a);
                     

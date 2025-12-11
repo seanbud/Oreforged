@@ -273,7 +273,10 @@ function App() {
                 position: 'absolute',
                 top: '20px',
                 left: '20px',
-                pointerEvents: 'none'
+                pointerEvents: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
             }}>
                 <Panel style={{ padding: '12px', minWidth: '200px', pointerEvents: 'auto' }}>
                     <div style={{ color: '#fff', fontSize: '14px' }}>
@@ -283,6 +286,22 @@ function App() {
                         </div>
                     </div>
                 </Panel>
+
+                <div style={{
+                    fontSize: '11px',
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    textShadow: '0px 1px 2px rgba(0,0,0,0.8)',
+                    fontFamily: '"Minecraft", sans-serif',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    paddingLeft: '4px'
+                }}>
+                    <div>• Left Click: Mine</div>
+                    <div>• Shift + Click: Pan Camera</div>
+                    <div>• Right Click: Rotate</div>
+                    <div>• Wheel: Zoom</div>
+                </div>
             </div>
 
             <ObjectiveTracker

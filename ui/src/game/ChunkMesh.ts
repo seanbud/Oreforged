@@ -12,13 +12,23 @@ export class ChunkMesh {
     mesh: THREE.Mesh | null = null;
     chunkX: number;
     chunkZ: number;
+    chunkData!: ChunkData; // Definite assignment assertion
 
     constructor(chunkX: number, chunkZ: number) {
         this.chunkX = chunkX;
         this.chunkZ = chunkZ;
     }
 
-    rebuild(chunkData: ChunkData, scene: THREE.Scene, material: THREE.Material) {
+    rebuild(scene: THREE.Scene, material: THREE.Material, chunkData?: ChunkData) {
+        if (chunkData) {
+            this.chunkData = chunkData;
+        } else if (!this.chunkData) {
+            console.error("No chunk data available for rebuild");
+            return;
+        }
+
+        const data = this.chunkData;
+
         // Remove old mesh if it exists
         if (this.mesh) {
             scene.remove(this.mesh);
@@ -32,7 +42,7 @@ export class ChunkMesh {
         const uvs: number[] = [];
         const indices: number[] = [];
 
-        const { blocks, size, height } = chunkData;
+        const { blocks, size, height } = data;
 
         // Helper to get block at local coordinates
         const getBlock = (x: number, y: number, z: number): number => {
@@ -331,7 +341,7 @@ export class ChunkMesh {
         this.mesh.receiveShadow = true;
 
         // Position chunk in world space
-        this.mesh.position.set(chunkData.chunkX * size, 0, chunkData.chunkZ * size);
+        this.mesh.position.set(data.chunkX * size, 0, data.chunkZ * size);
 
         scene.add(this.mesh);
     }

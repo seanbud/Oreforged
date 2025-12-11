@@ -3,15 +3,23 @@ import * as THREE from 'three';
 import { ChunkMesh, ChunkData } from './ChunkMesh';
 import { remoteFacet } from '../engine/hooks';
 import { BLOCKS_TEXTURE } from './blocks_texture';
+import { OreHealthSystem } from './systems/OreHealthSystem';
+import { HitParticleSystem } from './effects/HitParticles';
+import { DamageNumberOverlay, spawnDamageNumber } from './effects/DamageNumberOverlay';
+import { BlockType, ToolTier, canMineBlock, getDamage, BLOCK_DEFINITIONS } from './data/GameDefinitions';
 
 interface VoxelRendererProps {
     autoRotate?: boolean;
     rotationSpeed?: number;
+    currentTool?: ToolTier;
+    onResourceCollected?: (type: BlockType, count: number) => void;
 }
 
 export function VoxelRenderer({
     autoRotate = false,
-    rotationSpeed = 0
+    rotationSpeed = 0,
+    currentTool = ToolTier.HAND,
+    onResourceCollected
 }: VoxelRendererProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const sceneRef = useRef<THREE.Scene | null>(null);
@@ -22,6 +30,21 @@ export function VoxelRenderer({
     const rotationRef = useRef(0);
     const autoRotateRef = useRef(autoRotate);
     const rotationSpeedRef = useRef(rotationSpeed);
+
+    // Mining systems
+    const oreHealthRef = useRef<OreHealthSystem | null>(null);
+    const particleSystemRef = useRef<HitParticleSystem | null>(null);
+    // Refs for props to access in event listeners
+    const currentToolRef = useRef(currentTool);
+    const onResourceCollectedRef = useRef(onResourceCollected);
+
+    useEffect(() => {
+        currentToolRef.current = currentTool;
+        onResourceCollectedRef.current = onResourceCollected;
+    }, [currentTool, onResourceCollected]);
+
+    const outlineBoxRef = useRef<THREE.LineSegments | null>(null);
+
 
     const chunkDataFacet = remoteFacet<ChunkData | null>('chunk_data', null);
     const clearChunksFacet = remoteFacet<string | null>('clear_chunks', null);
@@ -88,8 +111,21 @@ export function VoxelRenderer({
 
         scene.add(directionalLight);
 
+        // Initialize mining systems
+        oreHealthRef.current = new OreHealthSystem();
+        particleSystemRef.current = new HitParticleSystem(scene);
+
+        // Create outline box for click feedback
+        const outlineGeometry = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.05, 1.05, 1.05));
+        const outlineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 });
+        const outlineBox = new THREE.LineSegments(outlineGeometry, outlineMaterial);
+        outlineBox.visible = false;
+        scene.add(outlineBox);
+        outlineBoxRef.current = outlineBox;
+
         // Camera controls state
         let isPanning = false;
+        let currentMousePosition: { x: number, y: number } | null = null;
         let isRotating = false;
         let isPitching = false;
         let previousMousePosition = { x: 0, y: 0 };
@@ -119,6 +155,121 @@ export function VoxelRenderer({
             camera.position.copy(cameraTarget).add(offset);
         };
 
+        // Helper to find block under cursor
+        const getHoveredBlock = (clientX: number, clientY: number) => {
+            if (!containerRef.current) return null;
+
+            const rect = renderer.domElement.getBoundingClientRect();
+            const mouse = new THREE.Vector2(
+                ((clientX - rect.left) / rect.width) * 2 - 1,
+                -((clientY - rect.top) / rect.height) * 2 + 1
+            );
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+
+            const chunks = Array.from(chunksRef.current.values()).map(c => c.mesh).filter(m => m !== null) as THREE.Mesh[];
+            const intersects = raycaster.intersectObjects(chunks);
+
+            if (intersects.length === 0) return null;
+
+            const intersection = intersects[0];
+            const chunk = chunksRef.current.get(
+                Array.from(chunksRef.current.keys()).find(key =>
+                    chunksRef.current.get(key)!.mesh === intersection.object
+                )!
+            );
+
+            if (!chunk) return null;
+
+            // Calculate block position within chunk
+            // Use ray direction to ensure we select the solid block we hit (move slightly forward along ray)
+            const hitPoint = intersection.point.clone();
+            const rayDir = raycaster.ray.direction.clone().normalize();
+            hitPoint.add(rayDir.multiplyScalar(0.01));
+
+            const localPoint = hitPoint.sub(intersection.object.position);
+
+            const blockX = Math.floor(localPoint.x);
+            const blockY = Math.floor(localPoint.y);
+            const blockZ = Math.floor(localPoint.z);
+
+            const chunkData = chunk.chunkData;
+            if (blockX < 0 || blockX >= chunkData.size ||
+                blockY < 0 || blockY >= chunkData.size ||
+                blockZ < 0 || blockZ >= chunkData.size) return null;
+
+            const blockIndex = blockY * chunkData.size * chunkData.size + blockZ * chunkData.size + blockX;
+            const blockType = chunkData.blocks[blockIndex] as BlockType;
+
+            const worldPos = intersection.object.position.clone();
+            worldPos.x += blockX + 0.5;
+            worldPos.y += blockY + 0.5;
+            worldPos.z += blockZ + 0.5;
+
+            return { chunk, chunkData, blockX, blockY, blockZ, blockIndex, blockType, worldPos };
+        };
+
+        // Handle mining a block
+        const handleMineBlock = (e: MouseEvent) => {
+            if (!oreHealthRef.current || !particleSystemRef.current) return;
+
+            const hit = getHoveredBlock(e.clientX, e.clientY);
+            if (!hit) return;
+
+            const { chunk, chunkData, blockX, blockY, blockZ, blockIndex, blockType, worldPos } = hit;
+
+            // Don't mine air or bedrock
+            if (blockType === BlockType.Air || blockType === BlockType.Bedrock) return;
+
+            // Check if we can mine this block with current tool
+            const damage = getDamage(currentToolRef.current);
+            if (!canMineBlock(blockType, currentToolRef.current)) {
+                return;
+            }
+
+            // Flash outline (extra flash on hit)
+            if (outlineBoxRef.current) {
+                (outlineBoxRef.current.material as THREE.LineBasicMaterial).opacity = 1;
+                // We let mousemove handle visibility/position mainly
+            }
+
+            // Spawn hit particles
+            const blockDef = BLOCK_DEFINITIONS[blockType];
+            const blockColor = new THREE.Color(blockDef.color);
+            particleSystemRef.current.spawnHitParticles(worldPos, blockColor);
+
+            // Show damage number
+            spawnDamageNumber(worldPos, damage, camera, containerRef.current!);
+
+            // Apply damage
+            const result = oreHealthRef.current.addDamage(
+                chunkData.chunkX,
+                chunkData.chunkZ,
+                blockX,
+                blockY,
+                blockZ,
+                blockType,
+                damage
+            );
+
+            // If block broke, remove it and spawn break particles
+            if (result.broke) {
+                console.log(`Broke ${blockDef.name}!`);
+                particleSystemRef.current.spawnBreakParticles(worldPos, blockColor);
+
+                // Remove block from chunk
+                chunkData.blocks[blockIndex] = BlockType.Air;
+                chunk.dispose(scene);
+                chunk.rebuild(scene, materialRef.current!, chunkData); // Fixed rebuild call
+
+                // Force update highlight to air (hide it)
+                if (outlineBoxRef.current) outlineBoxRef.current.visible = false;
+
+                onResourceCollectedRef.current?.(blockType, 1);
+            }
+        };
+
         // Mouse down - detect left or right click
         const handleMouseDown = (e: MouseEvent) => {
             e.preventDefault();
@@ -128,8 +279,14 @@ export function VoxelRenderer({
             velocity.z = 0;
             velocityHistory.length = 0;
 
-            if (e.button === 0) { // Left click - pan
-                isPanning = true;
+            if (e.button === 0) { // Left click
+                if (e.shiftKey) {
+                    // Shift + Left Click = Pan
+                    isPanning = true;
+                } else {
+                    // Left Click = Mine block
+                    handleMineBlock(e);
+                }
             } else if (e.button === 2) { // Right click - rotate or pitch
                 if (e.ctrlKey) {
                     // Ctrl + Right Click = Pitch (vertical angle)
@@ -153,6 +310,9 @@ export function VoxelRenderer({
         };
 
         const handleMouseMove = (e: MouseEvent) => {
+            currentMousePosition = { x: e.clientX, y: e.clientY };
+
+            // Highlight logic handled in animate loop to sync with momentum
             if (!isPanning && !isRotating) return;
 
             const deltaX = e.clientX - previousMousePosition.x;
@@ -391,6 +551,38 @@ export function VoxelRenderer({
 
         // Animation loop
         let animationFrameId: number;
+
+        const updateHighlight = () => {
+            // Don't highlight if panning/rotating or mouse not in window
+            if (isPanning || isRotating || !currentMousePosition) {
+                if (outlineBoxRef.current) outlineBoxRef.current.visible = false;
+                return;
+            }
+
+            const hit = getHoveredBlock(currentMousePosition.x, currentMousePosition.y);
+            if (outlineBoxRef.current) {
+                if (hit) {
+                    const { blockType, worldPos } = hit;
+                    outlineBoxRef.current.position.copy(worldPos);
+                    outlineBoxRef.current.visible = true;
+
+                    // Check if mineable
+                    if (blockType === BlockType.Bedrock || !canMineBlock(blockType, currentToolRef.current)) {
+                        (outlineBoxRef.current.material as THREE.LineBasicMaterial).color.setHex(0xff0000); // Red for invalid
+                    } else {
+                        (outlineBoxRef.current.material as THREE.LineBasicMaterial).color.setHex(0xffffff); // White for valid
+                    }
+
+                    // Keep opacity somewhat visible but not fully opaque unless clicked
+                    if ((outlineBoxRef.current.material as THREE.LineBasicMaterial).opacity < 0.3) {
+                        (outlineBoxRef.current.material as THREE.LineBasicMaterial).opacity = 0.3;
+                    }
+                } else {
+                    outlineBoxRef.current.visible = false;
+                }
+            }
+        };
+
         const animate = () => {
             animationFrameId = requestAnimationFrame(animate);
 
@@ -424,6 +616,7 @@ export function VoxelRenderer({
             }
 
             renderer.render(scene, camera);
+            updateHighlight();
         };
         animate();
 
@@ -521,7 +714,7 @@ export function VoxelRenderer({
                 }
 
                 // console.log(`Rebuilding mesh for chunk ${key}`);
-                chunkMesh.rebuild(data, sceneRef.current!, materialRef.current!);
+                chunkMesh.rebuild(sceneRef.current!, materialRef.current!, data);
                 // console.log(`Chunk ${key} rendered successfully`);
             } catch (error) {
                 console.error('Error processing chunk:', error);
@@ -539,13 +732,9 @@ export function VoxelRenderer({
     return (
         <div
             ref={containerRef}
-            style={{
-                width: '100vw',
-                height: '100vh',
-                overflow: 'hidden',
-                margin: 0,
-                padding: 0,
-            }}
-        />
+            style={{ width: '100%', height: '100%', position: 'relative' }}
+        >
+            <DamageNumberOverlay camera={cameraRef.current} />
+        </div>
     );
 }

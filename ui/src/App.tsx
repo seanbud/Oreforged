@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { VoxelRenderer } from './game/VoxelRenderer';
 import { bridge } from './engine/bridge';
-import { Input } from './components/Input';
-import { ProgressBar } from './components/ProgressBar';
-import { Slider } from './components/Slider';
-import Panel from './components/Panel';
+import { Input } from './oreui/Input';
+import { ProgressBar } from './oreui/ProgressBar';
+import { Slider } from './oreui/Slider';
+import Panel from './oreui/Panel';
+import { HUD } from './game/ui/HUD';
+import { BlockType, ToolTier } from './game/data/GameDefinitions';
 
 function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -17,6 +19,10 @@ function App() {
     // Rendering settings
     const [showEdges, setShowEdges] = useState(true);
     const [edgeIntensity, setEdgeIntensity] = useState(0.5);
+
+    // Gameplay state
+    const [inventory, setInventory] = useState<Record<number, number>>({});
+    const [currentTool] = useState<ToolTier>(ToolTier.HAND);
 
     useEffect(() => {
         console.log('App mounted, checking uiReady');
@@ -48,6 +54,10 @@ function App() {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
+
+    const handleSeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSeed(e.target.value);
+    };
 
     const handleRegenerate = async () => {
         if (isGenerating) return;
@@ -85,11 +95,20 @@ function App() {
         }
     };
 
+    const handleResourceCollected = (type: BlockType, count: number) => {
+        setInventory(prev => ({
+            ...prev,
+            [type]: (prev[type] || 0) + count
+        }));
+    };
+
     return (
         <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
             <VoxelRenderer
                 autoRotate={isRotating}
                 rotationSpeed={rotationSpeed}
+                currentTool={currentTool}
+                onResourceCollected={handleResourceCollected}
             />
 
             <div style={{
@@ -107,6 +126,8 @@ function App() {
                     </div>
                 </Panel>
             </div>
+
+            <HUD inventory={inventory} />
 
             {isGenerating && (
                 <div style={{
@@ -170,7 +191,7 @@ function App() {
                             <Input
                                 label="World Seed"
                                 value={seed}
-                                onChange={(e) => setSeed(e.target.value)}
+                                onChange={handleSeedChange}
                                 type="number"
                             />
 
@@ -234,7 +255,7 @@ function App() {
                                         max={0.2}
                                         step={0.01}
                                         value={rotationSpeed}
-                                        onChange={(e) => setRotationSpeed(parseFloat(e.target.value))}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRotationSpeed(parseFloat(e.target.value))}
                                     />
                                 )}
                             </div>
@@ -267,7 +288,7 @@ function App() {
                                         max={1}
                                         step={0.1}
                                         value={edgeIntensity}
-                                        onChange={(e) => setEdgeIntensity(parseFloat(e.target.value))}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEdgeIntensity(parseFloat(e.target.value))}
                                     />
                                 )}
                             </div>

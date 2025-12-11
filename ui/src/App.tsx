@@ -20,13 +20,26 @@ function App() {
 
     // Rendering settings
     const [showEdges, setShowEdges] = useState(true);
-    const [edgeIntensity, setEdgeIntensity] = useState(0.5);
 
     // Gameplay state
     const [inventory, setInventory] = useState<Record<number, number>>({});
     const [totalMined, setTotalMined] = useState(0);
     const [currentTool, setCurrentTool] = useState<ToolTier>(ToolTier.HAND);
     const [toolHealth, setToolHealth] = useState(100);
+    const [timePlayed, setTimePlayed] = useState(0);
+
+    // Timer Logic
+    useEffect(() => {
+        const timer = setInterval(() => setTimePlayed(p => p + 1), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const formatTime = (seconds: number) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
 
     useEffect(() => {
         console.log('App mounted, checking uiReady');
@@ -65,6 +78,16 @@ function App() {
 
     const handleRegenerate = async () => {
         if (isGenerating) return;
+
+        // Cost Check
+        const cost = 100;
+        if (totalMined < cost) {
+            console.log("Not enough blocks mined to regenerate!");
+            return;
+        }
+
+        // Deduct cost
+        setTotalMined(prev => prev - cost);
 
         setIsGenerating(true);
         setProgress(0);
@@ -249,6 +272,9 @@ function App() {
                         }}>
                             Game Menu
                         </h2>
+                        <div style={{ fontSize: '10px', color: '#aaa', marginBottom: '10px', fontFamily: 'monospace' }}>
+                            TIME PLAYED: {formatTime(timePlayed)}
+                        </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
                             <Input
@@ -260,14 +286,14 @@ function App() {
 
                             <button
                                 onClick={handleRegenerate}
-                                disabled={isGenerating}
+                                disabled={isGenerating || totalMined < 100}
                                 style={{
                                     padding: '12px 20px',
-                                    backgroundColor: isGenerating ? '#3B3B3B' : '#5B5B5B',
-                                    color: '#fff',
+                                    backgroundColor: (isGenerating || totalMined < 100) ? '#3B3B3B' : '#5B5B5B',
+                                    color: (totalMined < 100) ? '#888' : '#fff',
                                     border: '2px solid #000',
                                     borderRadius: '0',
-                                    cursor: isGenerating ? 'not-allowed' : 'pointer',
+                                    cursor: (isGenerating || totalMined < 100) ? 'not-allowed' : 'pointer',
                                     fontWeight: 'bold',
                                     fontFamily: '"Minecraft", "Press Start 2P", monospace',
                                     fontSize: '14px',
@@ -277,13 +303,13 @@ function App() {
                                     transition: 'all 0.1s'
                                 }}
                                 onMouseEnter={(e) => {
-                                    if (!isGenerating) e.currentTarget.style.backgroundColor = '#7B7B7B';
+                                    if (!isGenerating && totalMined >= 100) e.currentTarget.style.backgroundColor = '#7B7B7B';
                                 }}
                                 onMouseLeave={(e) => {
-                                    if (!isGenerating) e.currentTarget.style.backgroundColor = '#5B5B5B';
+                                    if (!isGenerating && totalMined >= 100) e.currentTarget.style.backgroundColor = '#5B5B5B';
                                 }}
                             >
-                                Regenerate World
+                                Regenerate World (Cost: 100 Blocks)
                             </button>
 
                             <div style={{ marginTop: '16px', borderTop: '2px solid #000', paddingTop: '16px' }}>
@@ -343,17 +369,6 @@ function App() {
                                     />
                                     Show Block Edges
                                 </label>
-
-                                {showEdges && (
-                                    <Slider
-                                        label="Edge Intensity"
-                                        min={0}
-                                        max={1}
-                                        step={0.1}
-                                        value={edgeIntensity}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEdgeIntensity(parseFloat(e.target.value))}
-                                    />
-                                )}
                             </div>
 
                             <button
@@ -412,8 +427,9 @@ function App() {
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 }
 

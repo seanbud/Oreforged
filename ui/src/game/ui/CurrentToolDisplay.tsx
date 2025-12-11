@@ -21,25 +21,55 @@ export const CurrentToolDisplay: React.FC<CurrentToolDisplayProps> = ({ currentT
     // Health bar color
     const barColor = isBroken ? '#D32F2F' : (toolHealth < 30 ? '#FBC02D' : Colors.Green.Base);
 
+    const [isHovered, setIsHovered] = React.useState(false);
+
     if (isBroken) name += " (BROKEN)";
 
     return (
-        <div style={{
-            position: 'absolute',
-            bottom: '24px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontFamily: Styles.Font.Family,
-            imageRendering: Styles.Font.Pixelated,
-            pointerEvents: 'none',
-            backgroundColor: 'rgba(20, 20, 20, 0.8)',
-            border: `1px solid ${isBroken ? '#EF5350' : Colors.Grey.Light}`,
-            padding: '4px 12px',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
-        }}>
+        <div
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            style={{
+                position: 'absolute',
+                bottom: '24px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontFamily: Styles.Font.Family,
+                imageRendering: Styles.Font.Pixelated,
+                pointerEvents: 'auto', // Auto to capture hover
+                backgroundColor: 'rgba(20, 20, 20, 0.8)',
+                border: `1px solid ${isBroken ? '#EF5350' : Colors.Grey.Light}`,
+                padding: '4px 12px',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+                cursor: 'help'
+            }}
+        >
+            {/* Tooltip */}
+            {isHovered && (
+                <div style={{
+                    position: 'absolute',
+                    bottom: '100%',
+                    left: '50%',
+                    transform: 'translate(-50%, -8px)',
+                    backgroundColor: '#111',
+                    border: '1px solid #fff',
+                    padding: '8px',
+                    width: 'max-content',
+                    color: '#fff',
+                    zIndex: 100,
+                    fontSize: '10px',
+                    textAlign: 'center',
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.5)'
+                }}>
+                    <div style={{ fontWeight: 'bold', marginBottom: '4px', color: textColor }}>{name}</div>
+                    <div>Durability: {Math.floor(toolHealth)}%</div>
+                    <div>Status: {isBroken ? "BROKEN" : "Active"}</div>
+                </div>
+            )}
+
             <div style={{
                 display: 'flex',
                 alignItems: 'center',

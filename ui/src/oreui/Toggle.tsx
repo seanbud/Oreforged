@@ -25,6 +25,7 @@ const Toggle: React.FC<ToggleProps> = ({ checked, onChange, label }) => {
                     cursor: 'pointer',
                     border: `${Styles.Border.Width} ${Styles.Border.Style} ${Colors.Grey.Base}`,
                     imageRendering: Styles.Font.Pixelated,
+                    pointerEvents: 'auto',
                 }}
             >
                 <div

@@ -1,4 +1,4 @@
-import React from 'react';
+import { Colors, Styles } from '../design/tokens';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label?: string;
@@ -10,9 +10,9 @@ export const Input: React.FC<InputProps> = ({ label, style, ...props }) => {
             {label && (
                 <label style={{
                     fontSize: '14px',
-                    color: '#fff',
-                    fontFamily: '"Minecraft", "Press Start 2P", monospace',
-                    textShadow: '2px 2px 0px #000'
+                    color: Colors.White,
+                    fontFamily: Styles.Font.Family,
+                    textShadow: Styles.Shadows.Text(Colors.Black)
                 }}>
                     {label}
                 </label>
@@ -21,14 +21,15 @@ export const Input: React.FC<InputProps> = ({ label, style, ...props }) => {
                 style={{
                     padding: '10px',
                     borderRadius: '0',
-                    border: '2px solid #000',
-                    backgroundColor: '#8B8B8B',
-                    color: '#fff',
+                    border: `${Styles.Border.Width} ${Styles.Border.Style} ${Colors.Black}`,
+                    backgroundColor: Colors.Grey.Base,
+                    color: Colors.White,
                     outline: 'none',
-                    fontFamily: '"Minecraft", monospace',
+                    fontFamily: Styles.Font.Family,
                     fontSize: '14px',
-                    boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.5), inset -2px -2px 0px rgba(255,255,255,0.3)',
-                    imageRendering: 'pixelated',
+                    boxShadow: Styles.Shadows.Inset,
+                    imageRendering: Styles.Font.Pixelated,
+                    pointerEvents: 'auto',
                     ...style
                 }}
                 {...props}

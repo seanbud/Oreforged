@@ -130,3 +130,14 @@ export function getDamage(toolTier: ToolTier): number {
 export function getBlockHealth(blockType: BlockType): number {
     return BLOCK_DEFINITIONS[blockType].health;
 }
+
+export const UPGRADES = {
+    energy: { name: "Fuel Efficiency", desc: "Reduces energy cost of upgrades" },
+    ore: { name: "Ore Hunter", desc: "Increases ore spawn rate" },
+    tree: { name: "Deforestation", desc: "Increases tree spawn rate" },
+    damage: { name: "Sharpness", desc: "Increases tool damage" }
+};
+
+export function getEnergyCost(level: number): number {
+    return Math.floor(10 * Math.pow(1.5, level));
+}

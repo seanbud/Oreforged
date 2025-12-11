@@ -7,9 +7,10 @@ interface SliderProps {
     step: number;
     value: number;
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    disabled?: boolean;
 }
 
-export function Slider({ label, min, max, step, value, onChange }: SliderProps) {
+export function Slider({ label, min, max, step, value, onChange, disabled }: SliderProps) {
     // Calculate the percentage for the gradient
     const percentage = ((value - min) / (max - min)) * 100;
     const zeroPercentage = ((0 - min) / (max - min)) * 100;
@@ -40,7 +41,7 @@ export function Slider({ label, min, max, step, value, onChange }: SliderProps) 
     }
 
     return (
-        <div style={{ marginBottom: '12px' }}>
+        <div style={{ marginBottom: '12px', opacity: disabled ? 0.5 : 1, pointerEvents: disabled ? 'none' : 'auto' }}>
             <label style={{
                 display: 'block',
                 marginBottom: '8px',
@@ -58,6 +59,7 @@ export function Slider({ label, min, max, step, value, onChange }: SliderProps) 
                 step={step}
                 value={value}
                 onChange={onChange}
+                disabled={disabled}
                 style={{
                     width: '100%',
                     height: '12px',

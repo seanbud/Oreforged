@@ -44,7 +44,7 @@ export const ResourceManifest: React.FC<ResourceManifestProps> = ({ inventory })
         }
     };
 
-    if (items.length === 0) return null;
+    const totalBlocks = Object.values(inventory).reduce((acc, val) => acc + val, 0);
 
     return (
         <div style={{
@@ -53,25 +53,44 @@ export const ResourceManifest: React.FC<ResourceManifestProps> = ({ inventory })
             right: '20px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '1px', // Tiny gap for list feel
+            gap: '1px',
             fontFamily: Styles.Font.Family,
             imageRendering: Styles.Font.Pixelated,
             pointerEvents: 'none',
-            alignItems: 'flex-end', // Align right
+            alignItems: 'flex-end',
         }}>
+            {/* Currency Counter (Total Usable Blocks) */}
+            <div style={{
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                padding: '8px 12px',
+                marginBottom: '8px',
+                border: `2px solid #FFD700`,
+                color: '#FFD700',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.5)'
+            }}>
+                <div style={{ fontSize: '10px' }}>AVAILABLE</div>
+                <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{totalBlocks} BLOCKS</div>
+            </div>
+
+            {/* Existing List */}
             {items.map(([type, count]) => {
                 const blockType = Number(type) as BlockType;
                 const color = getColor(blockType);
+                const isLow = blockType === BlockType.Wood && count <= 2;
 
                 return (
                     <div key={type} style={{
                         display: 'flex',
                         alignItems: 'center',
-                        backgroundColor: 'rgba(20, 20, 20, 0.8)',
+                        backgroundColor: isLow ? 'rgba(80, 20, 20, 0.9)' : 'rgba(20, 20, 20, 0.8)',
                         padding: '4px 8px',
                         justifyContent: 'flex-end',
                         gap: '10px',
-                        borderRight: `4px solid ${color}`, // Icon hint on edge
+                        borderRight: `4px solid ${isLow ? '#FF0000' : color}`,
+                        transition: 'all 0.3s ease'
                     }}>
                         {/* Icon Block */}
                         <div style={{

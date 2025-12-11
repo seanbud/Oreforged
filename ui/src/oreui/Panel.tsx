@@ -16,6 +16,7 @@ const Panel: React.FC<PanelProps> = ({ children, style, ...props }) => {
                 fontFamily: Styles.Font.Family,
                 imageRendering: Styles.Font.Pixelated,
                 boxShadow: Styles.Shadows.Bevel(Colors.Grey.Light, Colors.Grey.Dark),
+                pointerEvents: 'auto',
                 ...style
             }}
             {...props}

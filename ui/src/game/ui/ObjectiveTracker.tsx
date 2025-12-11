@@ -8,17 +8,18 @@ interface ObjectiveTrackerProps {
     inventory: Record<number, number>;
     totalMined: number;
     toolHealth: number;
+    hasCalibrated: boolean;
     onCraft: (recipe: CraftingRecipe) => void;
     onRepair: () => void;
 }
 
-export const ObjectiveTracker: React.FC<ObjectiveTrackerProps> = ({ currentTool, inventory, totalMined, toolHealth, onCraft, onRepair }) => {
-    // Stage 0: Stealth
-    if (totalMined < 6) return null;
+export const ObjectiveTracker: React.FC<ObjectiveTrackerProps> = ({ currentTool, inventory, totalMined, toolHealth, hasCalibrated, onCraft, onRepair }) => {
+    // Stage 0: Stealth (If NOT calibrated and low mined)
+    if (!hasCalibrated && totalMined < 6) return null;
 
-    // Stage 1: Calibration
+    // Stage 1: Calibration (If NOT calibrated)
     const calibrationTarget = 16;
-    if (totalMined < calibrationTarget) {
+    if (!hasCalibrated && totalMined < calibrationTarget) {
         return (
             <div style={{
                 position: 'absolute',

@@ -5,8 +5,9 @@ import { Input } from './oreui/Input';
 import { ProgressBar } from './oreui/ProgressBar';
 import { Slider } from './oreui/Slider';
 import Panel from './oreui/Panel';
-import { HUD } from './game/ui/HUD';
-import { BlockType, ToolTier } from './game/data/GameDefinitions';
+import { ResourceManifest } from './game/ui/ResourceManifest';
+import { ObjectiveTracker } from './game/ui/ObjectiveTracker';
+import { BlockType, ToolTier, CraftingRecipe } from './game/data/GameDefinitions';
 
 function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -22,7 +23,7 @@ function App() {
 
     // Gameplay state
     const [inventory, setInventory] = useState<Record<number, number>>({});
-    const [currentTool] = useState<ToolTier>(ToolTier.HAND);
+    const [currentTool, setCurrentTool] = useState<ToolTier>(ToolTier.HAND);
 
     useEffect(() => {
         console.log('App mounted, checking uiReady');
@@ -102,6 +103,28 @@ function App() {
         }));
     };
 
+    // Smart Upgrade Logic (Now handled by ObjectiveTracker visually, but we verify here)
+    const handleCraft = (recipe: CraftingRecipe) => {
+        // Double check affordability
+        const affordable = Array.from(recipe.cost.entries()).every(([block, required]) => (inventory[block] || 0) >= required);
+        if (!affordable) return;
+
+        // Deduct resources
+        setInventory(prev => {
+            const newInv = { ...prev };
+            recipe.cost.forEach((amount, type) => {
+                newInv[type] = (newInv[type] || 0) - amount;
+            });
+            return newInv;
+        });
+
+        // Upgrade tool
+        setCurrentTool(recipe.result);
+
+        // Play sound? (Future)
+        console.log(`Crafted ${recipe.displayName}!`);
+    };
+
     return (
         <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
             <VoxelRenderer
@@ -127,7 +150,13 @@ function App() {
                 </Panel>
             </div>
 
-            <HUD inventory={inventory} />
+            <ObjectiveTracker
+                currentTool={currentTool}
+                inventory={inventory}
+                onCraft={handleCraft}
+            />
+
+            <ResourceManifest inventory={inventory} />
 
             {isGenerating && (
                 <div style={{

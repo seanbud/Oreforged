@@ -7,6 +7,16 @@
 
 namespace OreForged {
 
+struct WorldConfig {
+    int size = 32;    // Standard chunk size (32x32)
+    int height = 32;  // Increased height for better terrain
+    float oreMult = 1.0f;
+    float treeMult = 1.0f;
+    // float damageMult stored/handled in App.tsx? No, maybe World needs to know for Block Health?
+    // Actually Block Health is handled in UI for now (VoxelRenderer/App).
+    // So WorldConfig just needs generation params.
+};
+
 // Hash function for chunk coordinates
 struct ChunkPos {
     int x, z;
@@ -42,16 +52,20 @@ public:
     
     uint32_t GetSeed() const { return m_seed; }
     
-    // Regenerate world with new seed
-    void Regenerate(uint32_t seed);
+    // Regenerate world with new seed and config
+    void Regenerate(uint32_t seed, const WorldConfig& config);
     
+    const WorldConfig& GetConfig() const { return m_config; }
+
 private:
     uint32_t m_seed;
+    WorldConfig m_config;
     std::unordered_map<ChunkPos, std::unique_ptr<Chunk>, ChunkPosHash> m_chunks;
     
     // Convert world coordinates to chunk coordinates
-    static ChunkPos WorldToChunk(int worldX, int worldZ);
-    static void WorldToLocal(int worldX, int worldZ, int& chunkX, int& chunkZ, int& localX, int& localZ);
+    // Now instance methods to access m_config.size
+    ChunkPos WorldToChunk(int worldX, int worldZ) const;
+    void WorldToLocal(int worldX, int worldZ, int& chunkX, int& chunkZ, int& localX, int& localZ) const;
 };
 
 } // namespace OreForged

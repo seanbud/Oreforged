@@ -6,6 +6,11 @@ namespace OreForged {
 World::World(uint32_t seed)
     : m_seed(seed)
 {
+    // Default config - Size 9 as requested ("Try 9")
+    m_config.size = 9;
+    m_config.height = 32;
+    m_config.oreMult = 1.0f; 
+    m_config.treeMult = 1.0f;
 }
 
 Block World::GetBlock(int x, int y, int z) const {
@@ -60,20 +65,20 @@ void World::GenerateChunk(int chunkX, int chunkZ) {
         return;
     }
     
-    auto chunk = std::make_unique<Chunk>(chunkX, chunkZ);
-    chunk->Generate(m_seed);
+    // Create new chunk with current config
+    auto chunk = std::make_unique<Chunk>(chunkX, chunkZ, m_config.size, m_config.height);
+    chunk->Generate(m_seed, m_config.oreMult, m_config.treeMult);
     
     m_chunks[pos] = std::move(chunk);
 }
 
-void World::Regenerate(uint32_t seed) {
+void World::Regenerate(uint32_t seed, const WorldConfig& config) {
     std::cout << "World::Regenerate called with seed: " << seed << std::endl;
-    std::cout << "Old seed was: " << m_seed << std::endl;
     m_seed = seed;
-    std::cout << "New seed is now: " << m_seed << std::endl;
+    m_config = config; // Update config
+    
     m_chunks.clear();
-    std::cout << "Chunks cleared, count: " << m_chunks.size() << std::endl;
-    // Chunks will be regenerated when LoadChunksAroundPosition is called by Game loop
+    std::cout << "Chunks cleared" << std::endl;
 }
 
 void World::LoadChunksAroundPosition(int centerChunkX, int centerChunkZ, int radius) {
@@ -95,26 +100,26 @@ std::vector<const Chunk*> World::GetLoadedChunks() const {
     return chunks;
 }
 
-ChunkPos World::WorldToChunk(int worldX, int worldZ) {
-    // Integer division (rounds toward zero)
-    // We want floor division for negative coordinates
-    int chunkX = worldX >= 0 ? worldX / Chunk::SIZE : (worldX - Chunk::SIZE + 1) / Chunk::SIZE;
-    int chunkZ = worldZ >= 0 ? worldZ / Chunk::SIZE : (worldZ - Chunk::SIZE + 1) / Chunk::SIZE;
+ChunkPos World::WorldToChunk(int worldX, int worldZ) const {
+    int s = m_config.size;
+    int chunkX = worldX >= 0 ? worldX / s : (worldX - s + 1) / s;
+    int chunkZ = worldZ >= 0 ? worldZ / s : (worldZ - s + 1) / s;
     
     return {chunkX, chunkZ};
 }
 
-void World::WorldToLocal(int worldX, int worldZ, int& chunkX, int& chunkZ, int& localX, int& localZ) {
+void World::WorldToLocal(int worldX, int worldZ, int& chunkX, int& chunkZ, int& localX, int& localZ) const {
     ChunkPos pos = WorldToChunk(worldX, worldZ);
     chunkX = pos.x;
     chunkZ = pos.z;
     
-    localX = worldX - (chunkX * Chunk::SIZE);
-    localZ = worldZ - (chunkZ * Chunk::SIZE);
+    int s = m_config.size;
+    localX = worldX - (chunkX * s);
+    localZ = worldZ - (chunkZ * s);
     
     // Ensure local coordinates are positive
-    if (localX < 0) localX += Chunk::SIZE;
-    if (localZ < 0) localZ += Chunk::SIZE;
+    if (localX < 0) localX += s;
+    if (localZ < 0) localZ += s;
 }
 
 } // namespace OreForged

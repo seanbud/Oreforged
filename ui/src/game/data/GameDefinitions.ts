@@ -45,6 +45,17 @@ export interface CraftingRecipe {
     displayName: string;
 }
 
+export interface ModLevels {
+    energy: number;
+    ore: number;
+    tree: number;
+    damage: number;
+}
+
+export interface Modifier {
+    damage: number;
+}
+
 // Block definitions
 export const BLOCK_DEFINITIONS: Record<BlockType, BlockDefinition> = {
     [BlockType.Air]: { health: 0, hardness: ToolTier.HAND, name: "Air", color: 0x000000 },

@@ -13,6 +13,7 @@ interface VoxelRendererProps {
     rotationSpeed?: number;
     currentTool?: ToolTier;
     isToolBroken?: boolean;
+    damageMultiplier?: number;
     onResourceCollected?: (type: BlockType, count: number) => void;
 }
 
@@ -21,6 +22,7 @@ export function VoxelRenderer({
     rotationSpeed = 0,
     currentTool = ToolTier.HAND,
     isToolBroken = false,
+    damageMultiplier = 1.0,
     onResourceCollected
 }: VoxelRendererProps) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -40,12 +42,14 @@ export function VoxelRenderer({
     const currentToolRef = useRef(currentTool);
     const isToolBrokenRef = useRef(isToolBroken);
     const onResourceCollectedRef = useRef(onResourceCollected);
+    const damageMultiplierRef = useRef(damageMultiplier);
 
     useEffect(() => {
         currentToolRef.current = currentTool;
         isToolBrokenRef.current = isToolBroken;
+        damageMultiplierRef.current = damageMultiplier;
         onResourceCollectedRef.current = onResourceCollected;
-    }, [currentTool, isToolBroken, onResourceCollected]);
+    }, [currentTool, isToolBroken, damageMultiplier, onResourceCollected]);
 
     const outlineBoxRef = useRef<THREE.LineSegments | null>(null);
 
@@ -228,8 +232,9 @@ export function VoxelRenderer({
 
             // Check if we can mine this block with current tool
             // If broken, damage is significantly reduced (e.g. 30%)
+            // Also apply damage multiplier (from progression mods)
             const baseDamage = getDamage(currentToolRef.current);
-            const damage = baseDamage * (isToolBrokenRef.current ? 0.3 : 1.0);
+            const damage = baseDamage * (isToolBrokenRef.current ? 0.3 : 1.0) * (damageMultiplierRef.current || 1.0);
 
             if (!canMineBlock(blockType, currentToolRef.current)) {
                 return;

@@ -8,18 +8,21 @@ import Panel from './oreui/Panel';
 import { ResourceManifest } from './game/ui/ResourceManifest';
 import { ObjectiveTracker } from './game/ui/ObjectiveTracker';
 import { CurrentToolDisplay } from './game/ui/CurrentToolDisplay';
-import { BlockType, ToolTier, CraftingRecipe } from './game/data/GameDefinitions';
+import { BlockType, ToolTier, CraftingRecipe, ModLevels, Modifier } from './game/data/GameDefinitions';
 
 function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [seed, setSeed] = useState('12345');
-    const [isRotating, setIsRotating] = useState(false);
-    const [rotationSpeed, setRotationSpeed] = useState(0);
-    const [isGenerating, setIsGenerating] = useState(false);
+    const [modLevels, setModLevels] = useState<ModLevels>({ energy: 0, ore: 0, tree: 0, damage: 0 });
+    const [runModifiers, setRunModifiers] = useState<Modifier[]>([]);
+
+    // STARTING SEED - Randomize on load
+    const [seed, setSeed] = useState<string>(Math.floor(Math.random() * 90000 + 10000).toString());
+    const [isGenerating, setIsGenerating] = useState<boolean>(false);
     const [progress, setProgress] = useState(0);
 
-    // Rendering settings
-    const [showEdges, setShowEdges] = useState(true);
+    // Camera State
+    const [isRotating, setIsRotating] = useState(false);
+    const [rotationSpeed, setRotationSpeed] = useState(0);
 
     // Gameplay state
     const [inventory, setInventory] = useState<Record<number, number>>({});
@@ -76,18 +79,41 @@ function App() {
         setSeed(e.target.value);
     };
 
+    // Progression Logic - New cost structure
+    const getModCost = (type: keyof typeof modLevels, level: number) => {
+        if (type === 'damage') {
+            // Damage starts expensive: 100, 150, 225, 337...
+            return Math.floor(100 * Math.pow(1.5, level));
+        } else {
+            // Others start cheap and double: 2, 4, 8, 16...
+            return 2 * Math.pow(2, level);
+        }
+    };
+
+    const buyMod = (type: keyof typeof modLevels) => {
+        const cost = getModCost(type, modLevels[type]);
+        if (totalMined >= cost) {
+            setTotalMined(prev => prev - cost);
+            setModLevels(prev => ({
+                ...prev,
+                [type]: prev[type] + 1
+            }));
+        }
+    };
+
     const handleRegenerate = async () => {
         if (isGenerating) return;
 
-        // Cost Check
-        const cost = 100;
-        if (totalMined < cost) {
+        // Static regen cost
+        const regenCost = 30;
+
+        if (totalMined < regenCost) {
             console.log("Not enough blocks mined to regenerate!");
             return;
         }
 
         // Deduct cost
-        setTotalMined(prev => prev - cost);
+        setTotalMined(prev => prev - regenCost);
 
         setIsGenerating(true);
         setProgress(0);
@@ -104,7 +130,28 @@ function App() {
 
         try {
             const seedNum = parseInt(seed) || 12345;
-            await bridge.call('regenerateWorld', [seedNum]);
+
+            // Calculate Next Gen Params
+            // Start: Size 9, Height 32
+            // Scale slowly: +2 size per level (reach size 33 at level 12)
+            const nextSize = 9 + modLevels.energy * 2;
+            const nextHeight = 32 + modLevels.energy * 2;
+            const oreMult = 1.0 + modLevels.ore * 0.5;
+            const treeMult = 1.0 + modLevels.tree * 0.5;
+            const dmgMult = 1.0 + modLevels.damage * 0.5;
+
+            console.log("Regenerating with mods:", { nextSize, nextHeight, oreMult, treeMult, dmgMult });
+
+            await bridge.regenerateWorld(seedNum, nextSize, nextHeight, oreMult, treeMult);
+
+            // Apply runtime modifiers
+            setRunModifiers([{
+                damage: dmgMult
+            }]);
+
+            // Reset Shop
+            setModLevels({ energy: 0, ore: 0, tree: 0, damage: 0 });
+
         } catch (e) {
             console.error("Regeneration failed", e);
         }
@@ -176,6 +223,41 @@ function App() {
         }
     };
 
+    // Helper to render mod button
+    const renderModButton = (label: string, type: keyof typeof modLevels, benefitDesc: string) => {
+        const level = modLevels[type];
+        const cost = getModCost(type, level);
+        const canAfford = totalMined >= cost;
+
+        const nextLevel = level + 1;
+
+        return (
+            <button
+                onClick={() => buyMod(type)}
+                disabled={!canAfford}
+                title={benefitDesc}
+                style={{
+                    flex: 1,
+                    padding: '8px',
+                    backgroundColor: canAfford ? '#4CAF50' : '#333',
+                    color: canAfford ? '#fff' : '#888',
+                    border: '2px solid #000',
+                    cursor: canAfford ? 'pointer' : 'not-allowed',
+                    fontSize: '12px',
+                    fontFamily: '"Minecraft", monospace',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: canAfford ? 'inset -2px -2px 0px rgba(0,0,0,0.5), inset 2px 2px 0px rgba(255,255,255,0.3)' : 'none'
+                }}
+            >
+                <div style={{ fontWeight: 'bold' }}>+{nextLevel} {label}</div>
+                <div style={{ fontSize: '10px', opacity: 0.8 }}>Cost: {cost}</div>
+            </button>
+        );
+    };
+
     return (
         <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
             <VoxelRenderer
@@ -184,6 +266,7 @@ function App() {
                 currentTool={currentTool}
                 isToolBroken={toolHealth <= 0}
                 onResourceCollected={handleResourceCollected}
+                damageMultiplier={(runModifiers[0] as any)?.damage || 1.0}
             />
 
             <div style={{
@@ -194,9 +277,9 @@ function App() {
             }}>
                 <Panel style={{ padding: '12px', minWidth: '200px', pointerEvents: 'auto' }}>
                     <div style={{ color: '#fff', fontSize: '14px' }}>
-                        <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>OreForged Pre-Alpha</div>
+                        <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>OreForged Roguelite</div>
                         <div style={{ color: '#aaa', marginTop: '4px', fontSize: '12px' }}>
-                            Press ESC for menu
+                            Press ESC for Store & Menu
                         </div>
                     </div>
                 </Panel>
@@ -254,11 +337,13 @@ function App() {
                         backgroundColor: '#3C3C3C',
                         padding: '24px',
                         borderRadius: '0',
-                        minWidth: '350px',
+                        minWidth: '450px',
                         color: 'white',
                         border: '4px solid #000',
                         boxShadow: 'inset -4px -4px 0px rgba(0,0,0,0.5), inset 4px 4px 0px rgba(255,255,255,0.3), 0 8px 16px rgba(0,0,0,0.5)',
-                        imageRendering: 'pixelated'
+                        imageRendering: 'pixelated',
+                        maxHeight: '90vh',
+                        overflowY: 'auto'
                     }}>
                         <h2 style={{
                             marginTop: 0,
@@ -272,11 +357,12 @@ function App() {
                         }}>
                             Game Menu
                         </h2>
-                        <div style={{ fontSize: '10px', color: '#aaa', marginBottom: '10px', fontFamily: 'monospace' }}>
-                            TIME PLAYED: {formatTime(timePlayed)}
+                        <div style={{ fontSize: '10px', color: '#aaa', marginBottom: '20px', fontFamily: 'monospace', textAlign: 'center' }}>
+                            TIME PLAYED: {formatTime(timePlayed)} | BLOCKS: {totalMined}
                         </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+
                             <Input
                                 label="World Seed"
                                 value={seed}
@@ -286,14 +372,16 @@ function App() {
 
                             <button
                                 onClick={handleRegenerate}
-                                disabled={isGenerating || totalMined < 100}
+                                disabled={isGenerating || totalMined < 30}
+                                title={`Next Gen Specs:\nSize: ${9 + modLevels.energy * 2}\nHeight: ${32 + modLevels.energy * 2}\nOre: x${1.0 + modLevels.ore * 0.5}\nDMG: x${1.0 + modLevels.damage * 0.5}`}
                                 style={{
                                     padding: '12px 20px',
-                                    backgroundColor: (isGenerating || totalMined < 100) ? '#3B3B3B' : '#5B5B5B',
-                                    color: (totalMined < 100) ? '#888' : '#fff',
+                                    marginBottom: '10px',
+                                    backgroundColor: (isGenerating || totalMined < 30) ? '#3B3B3B' : '#5B5B5B',
+                                    color: (totalMined < 30) ? '#888' : '#fff',
                                     border: '2px solid #000',
                                     borderRadius: '0',
-                                    cursor: (isGenerating || totalMined < 100) ? 'not-allowed' : 'pointer',
+                                    cursor: (isGenerating || totalMined < 30) ? 'not-allowed' : 'pointer',
                                     fontWeight: 'bold',
                                     fontFamily: '"Minecraft", "Press Start 2P", monospace',
                                     fontSize: '14px',
@@ -303,14 +391,38 @@ function App() {
                                     transition: 'all 0.1s'
                                 }}
                                 onMouseEnter={(e) => {
-                                    if (!isGenerating && totalMined >= 100) e.currentTarget.style.backgroundColor = '#7B7B7B';
+                                    if (!isGenerating && totalMined >= 30) e.currentTarget.style.backgroundColor = '#7B7B7B';
                                 }}
                                 onMouseLeave={(e) => {
-                                    if (!isGenerating && totalMined >= 100) e.currentTarget.style.backgroundColor = '#5B5B5B';
+                                    if (!isGenerating && totalMined >= 30) e.currentTarget.style.backgroundColor = '#5B5B5B';
                                 }}
                             >
-                                Regenerate World (Cost: 100 Blocks)
+                                Regenerate World (Cost: 30 Blocks)
                             </button>
+
+                            {/* STORE SECTION - Now Below Regenerate */}
+                            <div style={{
+                                backgroundColor: '#2b2b2b',
+                                border: '2px solid #000',
+                                padding: '10px',
+                            }}>
+                                <div style={{
+                                    fontSize: '10px',
+                                    fontWeight: 'bold',
+                                    paddingBottom: '5px',
+                                    marginBottom: '5px',
+                                    color: '#FFD700',
+                                    textAlign: 'center'
+                                }}>
+                                    Upgrades
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    {renderModButton("Energy", "energy", "+Size & Height")}
+                                    {renderModButton("Ore Find", "ore", "+Ore Density")}
+                                    {renderModButton("Trees", "tree", "+Tree Density")}
+                                    {renderModButton("DMG", "damage", "+Mining Damage")}
+                                </div>
+                            </div>
 
                             <div style={{ marginTop: '16px', borderTop: '2px solid #000', paddingTop: '16px' }}>
                                 <label style={{
@@ -349,28 +461,6 @@ function App() {
                                 )}
                             </div>
 
-                            <div style={{ marginTop: '16px', borderTop: '2px solid #000', paddingTop: '16px' }}>
-                                <label style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '10px',
-                                    cursor: 'pointer',
-                                    marginBottom: '12px',
-                                    fontFamily: '"Minecraft", monospace',
-                                    fontSize: '14px',
-                                    color: '#fff',
-                                    textShadow: '2px 2px 0px #000'
-                                }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={showEdges}
-                                        onChange={(e) => setShowEdges(e.target.checked)}
-                                        style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-                                    />
-                                    Show Block Edges
-                                </label>
-                            </div>
-
                             <button
                                 onClick={() => setIsMenuOpen(false)}
                                 style={{
@@ -387,12 +477,6 @@ function App() {
                                     boxShadow: 'inset -2px -2px 0px rgba(0,0,0,0.5), inset 2px 2px 0px rgba(255,255,255,0.3)',
                                     imageRendering: 'pixelated',
                                     transition: 'all 0.1s'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#7B7B7B';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#5B5B5B';
                                 }}
                             >
                                 Resume Game
@@ -414,12 +498,6 @@ function App() {
                                     boxShadow: 'inset -2px -2px 0px rgba(0,0,0,0.5), inset 2px 2px 0px rgba(255,255,255,0.3)',
                                     imageRendering: 'pixelated',
                                     transition: 'all 0.1s'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#B00000';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#8B0000';
                                 }}
                             >
                                 Quit Application

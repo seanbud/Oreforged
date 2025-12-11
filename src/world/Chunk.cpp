@@ -8,46 +8,47 @@
 
 namespace OreForged {
 
-Chunk::Chunk(int chunkX, int chunkZ) 
-    : m_chunkX(chunkX), m_chunkZ(chunkZ) {
-    // Initialize all blocks to air
-    for (int x = 0; x < SIZE; x++) {
-        for (int y = 0; y < HEIGHT; y++) {
-            for (int z = 0; z < SIZE; z++) {
-                m_blocks[x][y][z].type = BlockType::Air;
-            }
-        }
-    }
+Chunk::Chunk(int chunkX, int chunkZ, int size, int height) 
+    : m_chunkX(chunkX), m_chunkZ(chunkZ), m_size(size), m_height(height) {
+    // Initialize blocks vector
+    m_blocks.resize(size * height * size);
+    // Default constructor of Block sets type to Air (0)
+}
+
+// Indexing: y * (size*size) + z * size + x
+// Y-outer, Z-middle, X-inner
+int GetIndex(int x, int y, int z, int size) {
+    return y * size * size + z * size + x;
 }
 
 Block Chunk::GetBlock(int x, int y, int z) const {
     if (!IsValidPosition(x, y, z)) {
-        return Block(); // Return air for out-of-bounds
+        return Block(); // Return air
     }
-    return m_blocks[x][y][z];
+    return m_blocks[GetIndex(x, y, z, m_size)];
 }
 
 void Chunk::SetBlock(int x, int y, int z, BlockType type) {
     if (IsValidPosition(x, y, z)) {
-        m_blocks[x][y][z].type = type;
+        m_blocks[GetIndex(x, y, z, m_size)].type = type;
     }
 }
 
 bool Chunk::IsValidPosition(int x, int y, int z) const {
-    return x >= 0 && x < SIZE &&
-           y >= 0 && y < HEIGHT &&
-           z >= 0 && z < SIZE;
+    return x >= 0 && x < m_size &&
+           y >= 0 && y < m_height &&
+           z >= 0 && z < m_size;
 }
 
 // ============================================================================
-// TERRAIN GENERATION - Island System with Noise
+// TERRAIN GENERATION
 // ============================================================================
 
 namespace {
     const int SEA_LEVEL = 8;
     const int MIN_HEIGHT = 2;
-    const int MAX_HEIGHT = 19; // Further reduced 
-    const float ISLAND_RADIUS = 35.0f; // Shrink island
+    // MAX_HEIGHT depends on m_height now, dynamic
+    const float ISLAND_RADIUS = 35.0f;
     
     // Simple hash-based noise function
     float noise2D(int x, int z, uint32_t seed) {
@@ -56,26 +57,24 @@ namespace {
         return ((n ^ (n >> 16)) & 0x7fffffff) / 2147483648.0f;
     }
     
-    // Smooth noise with interpolation
+    // Smooth noise
     float smoothNoise(float x, float z, uint32_t seed) {
         int intX = static_cast<int>(x);
         int intZ = static_cast<int>(z);
         float fracX = x - intX;
         float fracZ = z - intZ;
         
-        // Get corner values
         float v1 = noise2D(intX, intZ, seed);
         float v2 = noise2D(intX + 1, intZ, seed);
         float v3 = noise2D(intX, intZ + 1, seed);
         float v4 = noise2D(intX + 1, intZ + 1, seed);
         
-        // Bilinear interpolation
         float i1 = v1 * (1 - fracX) + v2 * fracX;
         float i2 = v3 * (1 - fracX) + v4 * fracX;
         return i1 * (1 - fracZ) + i2 * fracZ;
     }
     
-    // Multi-octave noise for natural terrain
+    // Multi-octave
     float multiOctaveNoise(float x, float z, uint32_t seed, int octaves) {
         float total = 0.0f;
         float frequency = 1.0f;
@@ -88,336 +87,385 @@ namespace {
             amplitude *= 0.5f;
             frequency *= 2.0f;
         }
-        
         return total / maxValue;
     }
-    
-    // Organic island falloff - irregular, natural shape
-    float getIslandFalloff(int worldX, int worldZ) {
-        // Base circular falloff
+    // Island radial falloff (Restored & Tuned)
+    float getIslandFalloff(int worldX, int worldZ, int chunkSize) {
         float distance = std::sqrt(static_cast<float>(worldX * worldX + worldZ * worldZ));
-        float baseRadius = 45.0f;
         
-        if (distance > baseRadius + 15.0f) {
-            return 0.0f;
-        }
+        // Dynamic radius based on world size
+        // e.g. Size 12 -> Center at 6, Radius ~5
+        // e.g. Size 3 -> Center at 1.5, Radius ~1.5
+        // Current coordinate system: 0 to Size
+        // We need distance from Center of the generated area!
+        // But World Coordinates are chunkX*size + x.
+        // If we only load 1 chunk at 0,0, Center is Size/2.
         
-        // Add noise to make the island shape irregular
-        float shapeNoise = noise2D(worldX / 15, worldZ / 15, 12345);
-        float radiusVariation = (shapeNoise - 0.5f) * 20.0f; // +/- 10 blocks variation
+        float centerX = chunkSize / 2.0f;
+        float centerZ = chunkSize / 2.0f;
         
+        float dx = worldX - centerX;
+        float dz = worldZ - centerZ;
+        float distFromCenter = std::sqrt(dx*dx + dz*dz);
+        
+        float baseRadius = chunkSize * 0.45f; // usage 90% of width
+        
+        if (distFromCenter > baseRadius + (chunkSize * 0.2f)) return 0.0f;
+        
+        // Noise for shape variation
+        float shapeNoise = noise2D(worldX, worldZ, 12345);
+        float radiusVariation = (shapeNoise - 0.5f) * (chunkSize * 0.2f);
         float effectiveRadius = baseRadius + radiusVariation;
         
-        if (distance > effectiveRadius) {
-            // Smooth falloff
-            float fadeDistance = 15.0f;
-            float falloff = 1.0f - ((distance - effectiveRadius) / fadeDistance);
+        if (distFromCenter > effectiveRadius) {
+            float fadeDist = chunkSize * 0.2f; // Fade over 20% size
+            float falloff = 1.0f - ((distFromCenter - effectiveRadius) / fadeDist);
             return std::max(0.0f, falloff);
         }
-        
         return 1.0f;
     }
     
-    // Calculate terrain height for a world position
-    int calculateHeight(int worldX, int worldZ, uint32_t seed) {
-        // Get island falloff
-        float islandFalloff = getIslandFalloff(worldX, worldZ);
+    // Global Island Logic
+    int calculateHeight(int worldX, int worldZ, uint32_t seed, int chunkHeight, int chunkSize, int localX, int localZ) {
+        float islandFalloff = 1.0f;
         
-        if (islandFalloff < 0.05f) {
-            return SEA_LEVEL - 1; // Deep water
+        // For standard worlds (Size 32+), create a LARGE island centered at (16,16)
+        // that spans across neighbor chunks (Radius ~70-80 blocks)
+        if (chunkSize >= 32) {
+             float centerX = chunkSize / 2.0f; // Approx center of chunk 0,0
+             float centerZ = chunkSize / 2.0f;
+             
+             // worldX/Z are correct global coords.
+             float dx = worldX - centerX;
+             float dz = worldZ - centerZ;
+             float dist = std::sqrt(dx*dx + dz*dz);
+             
+             // Scale island to be large relative to chunk size, but fit within 5x5 view
+             // View radius = 2.5 chunks. 
+             // Factor 2.25 creates island almost reaching the edge (2.25 < 2.5)
+             float maxRadius = chunkSize * 2.25f;
+             
+             if (dist > maxRadius + 10.0f) {
+                 return SEA_LEVEL - 1; // Deep ocean
+             }
+             
+             if (dist > maxRadius) {
+                 float fade = (dist - maxRadius) / 10.0f;
+                 islandFalloff = 1.0f - fade;
+             }
+        }
+        else if (chunkSize < 20) {
+            // Tiny challenge worlds
+            islandFalloff = getIslandFalloff(worldX, worldZ, chunkSize);
+            if (islandFalloff < 0.05f) return SEA_LEVEL - 1;
         }
         
-        // Layer 1: Large rolling hills (base terrain)
+        // Terrain Layers
         float largeHills = multiOctaveNoise(worldX / 16.0f, worldZ / 16.0f, seed, 2);
-        
-        // Layer 2: Medium features (plateaus and valleys)
         float mediumFeatures = multiOctaveNoise(worldX / 8.0f, worldZ / 8.0f, seed + 1000, 2);
-        
-        // Layer 3: Small details
         float smallDetails = noise2D(worldX / 4, worldZ / 4, seed + 2000);
         
-        // Combine layers with different weights
         float combinedNoise = largeHills * 0.5f + mediumFeatures * 0.3f + smallDetails * 0.2f;
-        
-        // Create some dramatic height variation
-        // Center the noise around 0.5, then scale
         float heightFactor = (combinedNoise - 0.5f) * 2.0f; // -1 to +1
-        
-        // Apply island falloff to make edges lower
         heightFactor *= islandFalloff;
         
-        // Add some "plateau" effect - flatten high areas slightly
+        // Flatten tops
         if (heightFactor > 0.3f) {
-            heightFactor = 0.3f + (heightFactor - 0.3f) * 0.5f;
+            heightFactor = 0.3f + (heightFactor - 0.3f) * 0.5f; 
         }
         
-        // Calculate final height
-        // Sea level is 8, base range +5 (very controlled)
-        int height = SEA_LEVEL + static_cast<int>(heightFactor * 5.0f);
-
-        // Stone Towers (Dynamic Verticality - Subtle)
-        float towerNoise = smoothNoise(worldX / 5.0f, worldZ / 5.0f, seed + 8888);
+        // Base Height calculation - ensure most land is ABOVE sea level
+        float hRatio = chunkHeight / 32.0f;
+        float varianceScale = (hRatio < 1.0f) ? hRatio : 1.0f; 
+        int height = SEA_LEVEL + 1 + static_cast<int>(heightFactor * 5.0f * varianceScale); // +1 boost (was +2)
         
-        if (towerNoise > 0.90f) {
-            // Pillars/Plateaus
-            float towerH = (towerNoise - 0.90f) * 40.0f; // Max +4 blocks
+        // Pillars/Towers (Restored)
+        float towerNoise = smoothNoise(worldX / 5.0f, worldZ / 5.0f, seed + 8888);
+        if (towerNoise > 0.90f) { 
+            float towerH = (towerNoise - 0.90f) * 15.0f * varianceScale;
             height += static_cast<int>(towerH);
-        } else if (towerNoise > 0.75f) {
-             // Gentle rise
+        } else if (towerNoise > 0.80f) {
              height += 1;
         }
-        
-        // Ensure beaches exist - areas just above water should be flatter
-        if (height == SEA_LEVEL || height == SEA_LEVEL + 1) {
-            // Beach area - make it flatter
+
+        // Beach - only at edges near water
+        if (height == SEA_LEVEL + 1 || height == SEA_LEVEL + 2) {
             float beachNoise = noise2D(worldX / 3, worldZ / 3, seed + 3000);
-            if (beachNoise < 0.6f) {
-                height = SEA_LEVEL + 1; // Flat beach
-            }
+            if (beachNoise < 0.45f) height = SEA_LEVEL; // Increased chance for water/beach
         }
         
-        return std::max(MIN_HEIGHT, std::min(MAX_HEIGHT, height));
+        return std::max(MIN_HEIGHT, height);
     }
     
-    // Check if position should be sand (beach)
     bool shouldBeSand(int worldX, int worldZ, int height, uint32_t seed) {
-        // Only sand near water level
-        if (height < SEA_LEVEL - 1 || height > SEA_LEVEL + 1) {
-            return false;
-        }
-        
-        // Check if near water (check neighbors)
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                if (dx == 0 && dz == 0) continue;
-                int neighborHeight = calculateHeight(worldX + dx, worldZ + dz, seed);
-                if (neighborHeight <= SEA_LEVEL) {
-                    return true; // Near water
-                }
-            }
-        }
-        
-        return false;
+        // ONLY exact sea level is sand (beaches)
+        if (height != SEA_LEVEL) return false;
+        return true; 
     }
 }
 
-void Chunk::Generate(uint32_t seed) {
-    std::cout << "Chunk::Generate(" << m_chunkX << "," << m_chunkZ << ") using seed: " << seed << std::endl;
-    
-    for (int x = 0; x < SIZE; x++) {
-        for (int z = 0; z < SIZE; z++) {
-            int worldX = m_chunkX * SIZE + x;
-            int worldZ = m_chunkZ * SIZE + z;
+void Chunk::Generate(uint32_t seed, float oreMult, float treeMult) {
+    // Determine effective max height (leave 1 block for trees/player?)
+    const int GEN_MAX_HEIGHT = std::min(30, m_height - 1); 
+
+    for (int x = 0; x < m_size; x++) {
+        for (int z = 0; z < m_size; z++) {
+            int worldX = m_chunkX * m_size + x; // Use m_size for coordinate projection
+            int worldZ = m_chunkZ * m_size + z;
             
-            // Calculate terrain height
-            int height = calculateHeight(worldX, worldZ, seed);
+            // Note: If size changes, the world coordinates scale differently if we use 
+            // chunkX * size. This matches "Smaller Levels" visually.
             
-            // Determine surface block type
+            int height = calculateHeight(worldX, worldZ, seed, m_height, m_size, x, z);
+            height = std::min(height, GEN_MAX_HEIGHT);
+
             bool isSand = shouldBeSand(worldX, worldZ, height, seed);
             BlockType surfaceType = isSand ? BlockType::Sand : BlockType::Grass;
             
-            // Build column from bottom to top
-            m_blocks[x][0][z].type = BlockType::Bedrock; // Bedrock at bottom
-            
-            // Stone layer (underground) - reduced by 1
-            for (int y = 1; y < height - 1 && y < HEIGHT; y++) {
-                m_blocks[x][y][z].type = BlockType::Stone;
+            // Fix: Underwater surface should be Sand or Stone, not Grass
+            if (height <= SEA_LEVEL) {
+                 surfaceType = BlockType::Sand; // Or Gravel/Stone
+            }
+            // VISUAL UPGRADE: Energy (Height) > 5 exposes more rock
+            // High energy worlds are more mountainous/rugged
+            else if (m_height > 40) { // Energy ~4+
+                 float rockExposureNoise = noise2D(worldX, worldZ, seed + 4444);
+                 // The higher the world, the more rock exposed
+                 float threshold = 0.7f - ((m_height - 40) * 0.02f); 
+                 if (rockExposureNoise > threshold) {
+                     surfaceType = BlockType::Stone;
+                 }
             }
             
-            // Dirt layer (just below surface) - only 1 layer now
-            if (height > 1 && height - 1 < HEIGHT) {
-                m_blocks[x][height - 1][z].type = BlockType::Dirt;
+            // Fill
+            SetBlock(x, 0, z, BlockType::Bedrock);
+            
+            for (int y = 1; y < height - 1 && y < m_height; y++) {
+                SetBlock(x, y, z, BlockType::Stone);
+            }
+            if (height > 1 && height - 1 < m_height) {
+                SetBlock(x, height - 1, z, BlockType::Dirt);
+            }
+            if (height < m_height) {
+                SetBlock(x, height, z, surfaceType);
             }
             
-            // Surface block
-            if (height < HEIGHT) {
-                m_blocks[x][height][z].type = surfaceType;
+            // Water
+            for (int y = height + 1; y <= SEA_LEVEL && y < m_height; y++) {
+                SetBlock(x, y, z, BlockType::Water);
             }
             
-            // Fill with water if below sea level
-            for (int y = height + 1; y <= SEA_LEVEL && y < HEIGHT; y++) {
-                m_blocks[x][y][z].type = BlockType::Water;
+            // VISUAL UPGRADE: Ore Find sprinkles loose rocks on surface
+            if (surfaceType == BlockType::Grass && height > SEA_LEVEL && height + 1 < m_height) {
+                float surfaceRockNoise = noise2D(worldX, worldZ, seed + 5555);
+                // Chance scales with Ore Mult (1% to 5% ish)
+                if (surfaceRockNoise < (0.01f * oreMult)) {
+                    SetBlock(x, height + 1, z, BlockType::Stone);
+                }
             }
         }
     }
     
-    // Generate ores in stone layers
-    GenerateOres(seed);
+    GenerateOres(seed, oreMult);
+    GenerateTrees(seed, treeMult);
+}
+
+void Chunk::GenerateOres(uint32_t seed, float oreMult) {
+    // Track counts for guarantees
+    int coalCount = 0, ironCount = 0, goldCount = 0, diamondCount = 0;
     
-    // Generate trees on grass
-    GenerateTrees(seed);
+    auto getThresh = [&](float baseFreq) {
+        float freq = baseFreq * oreMult;
+        return 1.0f - freq;
+    };
+
+    // Natural generation pass
+    for (int x = 0; x < m_size; x++) {
+        for (int z = 0; z < m_size; z++) {
+            int surfaceY = FindSurfaceY(x, z);
+            if (surfaceY < 0 || GetBlock(x, surfaceY, z).type != BlockType::Grass) continue;
+            if (surfaceY + 1 >= m_height) continue;
+            
+            int worldX = m_chunkX * m_size + x;
+            int worldZ = m_chunkZ * m_size + z;
+            
+            float oreNoise = noise2D(worldX, worldZ, seed + 6000);
+            
+            if (oreNoise > getThresh(0.001f)) {        // 0.1% Diamond
+                SetBlock(x, surfaceY + 1, z, BlockType::Diamond);
+                diamondCount++;
+            } else if (oreNoise > getThresh(0.004f)) { // 0.4% Gold
+                SetBlock(x, surfaceY + 1, z, BlockType::Gold);
+                goldCount++;
+            } else if (oreNoise > getThresh(0.01f)) {  // 1.0% Iron
+                SetBlock(x, surfaceY + 1, z, BlockType::Iron);
+                ironCount++;
+            } else if (oreNoise > getThresh(0.02f)) {  // 2.0% Coal (Sprinkling)
+                 SetBlock(x, surfaceY + 1, z, BlockType::Coal);
+                 coalCount++;
+            }
+        }
+    }
+    
+    // Guarantee minimums
+    // Guarantee minimums - Use CHUNK SEED to prevent grid patterns
+    uint32_t chunkSeed = seed + (m_chunkX * 4567) ^ (m_chunkZ * 8901);
+    
+    auto placeOre = [&](BlockType ore, int needed) {
+        for (int i = 0; i < needed; i++) {
+            for (int attempt = 0; attempt < 20; attempt++) {
+                int rx = (noise2D(i, attempt, chunkSeed + 7000) * 0.5f + 0.5f) * m_size;
+                int rz = (noise2D(attempt, i, chunkSeed + 7001) * 0.5f + 0.5f) * m_size;
+                rx = std::max(0, std::min(m_size - 1, rx));
+                rz = std::max(0, std::min(m_size - 1, rz));
+                
+                int sy = FindSurfaceY(rx, rz);
+                
+                // Only place on land?
+                if (sy < SEA_LEVEL) continue; // Prevent underwater ores
+                
+                if (sy >= 0 && sy + 1 < m_height) {
+                    if (GetBlock(rx, sy, rz).type == BlockType::Grass) {
+                        SetBlock(rx, sy + 1, rz, ore);
+                        break;
+                    }
+                }
+            }
+        }
+    };
+    
+    if (coalCount < 1) placeOre(BlockType::Coal, 2);
+    if (ironCount < 3) placeOre(BlockType::Iron, 3 - ironCount);
+    if (goldCount < 1) placeOre(BlockType::Gold, 1);
+    
+    // 30% chance for diamond if none generated
+    if (diamondCount == 0) {
+        float dRoll = noise2D(seed, seed + 123, seed + 456) * 0.5f + 0.5f;
+        if (dRoll < 0.3f) {
+            placeOre(BlockType::Diamond, 1);
+        }
+    }
+}
+
+void Chunk::GenerateTrees(uint32_t seed, float treeMult) {
+    int treeCount = 0;
+    
+    // Guarantee minimum 15 trees regardless of size
+    // Simple "Sprinkling" Logic - No zones, just random chance
+    // Iterate FULL chunk (no margins) to prevent grid lines
+    for (int x = 0; x < m_size; x++) {
+        for (int z = 0; z < m_size; z++) {
+            int surfaceY = FindSurfaceY(x, z);
+            if (surfaceY < 0 || GetBlock(x, surfaceY, z).type != BlockType::Grass) continue;
+            
+            // Ensure tree is ON LAND (Above Sea Level)
+            if (surfaceY < SEA_LEVEL) continue;
+            
+            int worldX = m_chunkX * m_size + x;
+            int worldZ = m_chunkZ * m_size + z;
+            
+            float treeNoise = noise2D(worldX, worldZ, seed + 5000);
+            
+            // Base chance 5% + modifier (Boosted from 2% to ensure trees on island)
+            float chance = 0.05f * treeMult;
+            
+            if (treeNoise < (1.0f - chance)) continue;
+            
+            float heightNoise = noise2D(worldX, worldZ, seed + 1234);
+            int trunkHeight = 3;
+            if (heightNoise > 0.90f) trunkHeight = 4;
+            else if (heightNoise < 0.30f) trunkHeight = 2;
+            
+            if (surfaceY + trunkHeight + 3 >= m_height) continue;
+            
+            PlaceTree(x, surfaceY + 1, z, trunkHeight);
+            treeCount++;
+        }
+    }
+    
+    // Guarantee minimum 15 trees regardless of size
+    // Use CHUNK-SPECIFIC SEED to avoid repeating patterns
+    int minTrees = 15;
+    if (treeCount < minTrees) {
+        uint32_t chunkSeed = seed + (m_chunkX * 73856093) ^ (m_chunkZ * 19349663);
+        
+        for (int i = 0; i < minTrees - treeCount; i++) {
+            for (int attempt = 0; attempt < 30; attempt++) {
+                int rx = 2 + static_cast<int>((noise2D(i, attempt, chunkSeed + 8000) * 0.5f + 0.5f) * (m_size - 5));
+                int rz = 2 + static_cast<int>((noise2D(attempt, i, chunkSeed + 8001) * 0.5f + 0.5f) * (m_size - 5));
+                
+                int sy = FindSurfaceY(rx, rz);
+                
+                // Ensure on land
+                if (sy < SEA_LEVEL) continue;
+                
+                if (sy >= 0 && sy + 6 < m_height) {
+                    if (GetBlock(rx, sy, rz).type == BlockType::Grass) {
+                        PlaceTree(rx, sy + 1, rz, 3);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void Chunk::PlaceTree(int x, int baseY, int z, int trunkHeight) {
+    for (int y = 0; y < trunkHeight; y++) {
+        SetBlock(x, baseY + y, z, BlockType::Wood);
+    }
+    
+    int topY = baseY + trunkHeight;
+    // Leaves... (Simplified reuse of logic)
+    // Bottom Ring
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dz = -1; dz <= 1; dz++) {
+            if (dx == 0 && dz == 0) continue;
+            int ly = topY - 1;
+            if (IsValidPosition(x + dx, ly, z + dz)) {
+                if (GetBlock(x+dx,ly,z+dz).type == BlockType::Air) SetBlock(x+dx,ly,z+dz, BlockType::Leaves);
+            }
+        }
+    }
+    // Top Layer
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dz = -1; dz <= 1; dz++) {
+            if (IsValidPosition(x + dx, topY, z + dz)) {
+                 if (GetBlock(x+dx,topY,z+dz).type == BlockType::Air) SetBlock(x+dx,topY,z+dz, BlockType::Leaves);
+            }
+        }
+    }
+    // Top
+    if (IsValidPosition(x, topY+1, z)) SetBlock(x, topY+1, z, BlockType::Leaves);
+}
+
+int Chunk::FindSurfaceY(int x, int z) const {
+    for (int y = m_height - 1; y >= 0; y--) {
+        Block b = GetBlock(x, y, z);
+        if (b.type != BlockType::Air && b.type != BlockType::Water) return y;
+    }
+    return -1;
 }
 
 std::string Chunk::Serialize() const {
     std::string json = "{";
     json += "\"chunkX\":" + std::to_string(m_chunkX) + ",";
     json += "\"chunkZ\":" + std::to_string(m_chunkZ) + ",";
-    json += "\"size\":" + std::to_string(SIZE) + ",";
-    json += "\"height\":" + std::to_string(HEIGHT) + ",";
+    json += "\"size\":" + std::to_string(m_size) + ",";
+    json += "\"height\":" + std::to_string(m_height) + ",";
     json += "\"blocks\":[";
     
-    // Flatten 3D array to 1D: index = y * SIZE * SIZE + z * SIZE + x
+    // Flatten 3D array to 1D: index = y * size * size + z * size + x
+    // Our vector is already in this order!
     bool first = true;
-    for (int y = 0; y < HEIGHT; y++) {
-        for (int z = 0; z < SIZE; z++) {
-            for (int x = 0; x < SIZE; x++) {
-                if (!first) json += ",";
-                json += std::to_string(static_cast<int>(m_blocks[x][y][z].type));
-                first = false;
-            }
-        }
+    for (const auto& block : m_blocks) {
+        if (!first) json += ",";
+        json += std::to_string(static_cast<int>(block.type));
+        first = false;
     }
     
     json += "]}";
     return json;
 }
 
-// ============================================================================
-// ORE GENERATION
-// ============================================================================
-
-void Chunk::GenerateOres(uint32_t seed) {
-    // Place ores on the surface as decorative blocks
-    for (int x = 0; x < SIZE; x++) {
-        for (int z = 0; z < SIZE; z++) {
-            int surfaceY = FindSurfaceY(x, z);
-            
-            // Only place on grass blocks
-            if (surfaceY < 0 || m_blocks[x][surfaceY][z].type != BlockType::Grass) continue;
-            
-            // Check if there's space above
-            if (surfaceY + 1 >= HEIGHT) continue;
-            
-            int worldX = m_chunkX * SIZE + x;
-            int worldZ = m_chunkZ * SIZE + z;
-            
-            // Use noise to determine ore type
-            float oreNoise = noise2D(worldX, worldZ, seed + 6000);
-            
-            // Place ore blocks on surface with different rarities
-            // Place ore blocks on surface with different rarities (HOARDER MODE)
-            // Way less ores seen.
-            if (oreNoise > 0.998f) {
-                m_blocks[x][surfaceY + 1][z].type = BlockType::Diamond; // 0.2% (Extremely Rare)
-            } else if (oreNoise > 0.99f) {
-                m_blocks[x][surfaceY + 1][z].type = BlockType::Gold; // 1.0% (Very Rare)
-            } else if (oreNoise > 0.97f) {
-                m_blocks[x][surfaceY + 1][z].type = BlockType::Iron; // 3.0% (Rare)
-            } else if (oreNoise > 0.94f) {
-                m_blocks[x][surfaceY + 1][z].type = BlockType::Coal; // 6.0% (Uncommon)
-            }
-        }
-    }
-}
-
-// ============================================================================
-// TREE GENERATION
-// ============================================================================
-
-void Chunk::GenerateTrees(uint32_t seed) {
-    for (int x = 2; x < SIZE - 2; x++) {
-        for (int z = 2; z < SIZE - 2; z++) {
-            int surfaceY = FindSurfaceY(x, z);
-            
-            if (surfaceY < 0 || m_blocks[x][surfaceY][z].type != BlockType::Grass) continue;
-            
-            // Forest Clustering: Use low frequency noise to create "forest zones"
-            int worldX = m_chunkX * SIZE + x;
-            int worldZ = m_chunkZ * SIZE + z;
-            float forestNoise = noise2D(worldX / 20.0f, worldZ / 20.0f, seed + 9999);
-            
-            // Only spawn trees in forest zones (threshold 0.6)
-            if (forestNoise < 0.6f) continue;
-            
-            // Individual tree placement within forest (density check)
-            float treeNoise = noise2D(worldX, worldZ, seed + 5000);
-            if (treeNoise < 0.85f) continue; // 15% density within forests
-            
-            // Determine tree height (2, 3, or 4)
-            // Use a different noise or hash for height to be deterministic
-            float heightNoise = noise2D(worldX, worldZ, seed + 1234);
-            int trunkHeight = 3; // Default
-            if (heightNoise > 0.90f) trunkHeight = 4;      // Rare tall trees
-            else if (heightNoise < 0.30f) trunkHeight = 2; // Some short trees
-            
-            // Check vertical space
-            if (surfaceY + trunkHeight + 3 >= HEIGHT) continue;
-            
-            PlaceTree(x, surfaceY + 1, z, trunkHeight);
-        }
-    }
-}
-
-void Chunk::PlaceTree(int x, int baseY, int z, int trunkHeight) {
-    // Trunk
-    for (int y = 0; y < trunkHeight; y++) {
-        int trunkY = baseY + y;
-        if (IsValidPosition(x, trunkY, z) && trunkY < HEIGHT) {
-            m_blocks[x][trunkY][z].type = BlockType::Wood;
-        }
-    }
-    
-    // Leaves
-    // Layer 1: Around top of trunk (3x3)
-    // Layer 2: On top of trunk (cross shape or single block)
-    
-    int topY = baseY + trunkHeight; // The block ABOVE the last trunk block
-    
-    // 3x3 Leaf Cluster around the top trunk block (which is at topY - 1)
-    // Actually, let's put leaves starting at topY - 1 (surrounding top of trunk)
-    // and going up to topY + 1
-    
-    // Bottom Leaf Layer (surrounds top of trunk)
-    int bottomLeafY = topY - 1;
-    for (int dx = -1; dx <= 1; dx++) {
-        for (int dz = -1; dz <= 1; dz++) {
-            if (dx == 0 && dz == 0) continue; // Don't replace trunk
-            
-            if (IsValidPosition(x + dx, bottomLeafY, z + dz)) {
-                 if (m_blocks[x + dx][bottomLeafY][z + dz].type == BlockType::Air) {
-                    m_blocks[x + dx][bottomLeafY][z + dz].type = BlockType::Leaves;
-                 }
-            }
-        }
-    }
-    
-    // Top Leaf Layer (on top of trunk) - 3x3 but maybe corners missing for roundness?
-    // Let's do a full 3x3 on top, then a single one on very top?
-    // User said "one more leaf block on top".
-    // Let's do:
-    // Y-1: 3x3 ring around trunk
-    // Y: 3x3 layer on top of trunk (filling center)
-    // Y+1: Single block on top
-    
-    // Middle Leaf Layer (at topY)
-    for (int dx = -1; dx <= 1; dx++) {
-        for (int dz = -1; dz <= 1; dz++) {
-             // Skip corners for rounder look? Or keep full 3x3?
-             // Let's keep full 3x3 for now, it looks fuller
-            if (IsValidPosition(x + dx, topY, z + dz)) {
-                 if (m_blocks[x + dx][topY][z + dz].type == BlockType::Air) {
-                    m_blocks[x + dx][topY][z + dz].type = BlockType::Leaves;
-                 }
-            }
-        }
-    }
-    
-    // Very Top (Single block)
-    if (IsValidPosition(x, topY + 1, z)) {
-        m_blocks[x][topY + 1][z].type = BlockType::Leaves;
-    }
-}
-
-int Chunk::FindSurfaceY(int x, int z) const {
-    for (int y = HEIGHT - 1; y >= 0; y--) {
-        if (m_blocks[x][y][z].type != BlockType::Air && 
-            m_blocks[x][y][z].type != BlockType::Water) {
-            return y;
-        }
-    }
-    return -1;
-}
-
 } // namespace OreForged
-
-

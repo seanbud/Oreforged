@@ -32,17 +32,31 @@ window.OreForged.updateFacet = (id, value) => {
     facetManager.updateFacet(id, value);
 };
 
+const call = (name: string, args: any[]) => {
+    // The C++ webview bind adds the function to window
+    if ((window as any)[name]) {
+        return (window as any)[name](JSON.stringify(args));
+    }
+    // Fallback or debug
+    console.warn(`Bridge call failed: ${name} not found on window object`);
+    // Mock for dev in browser?
+    return Promise.resolve();
+};
+
 export const bridge = {
-    call: (name: string, args: any[]) => {
-        if ((window as any)[name]) {
-            return (window as any)[name](JSON.stringify(args));
-        }
-        console.warn(`Bridge call failed: ${name} not found`);
-    },
+    call,
     uiReady: () => {
         if ((window as any).uiReady) {
             (window as any).uiReady();
         }
+    },
+    regenerateWorld: async (seed: number, size?: number, height?: number, oreMult?: number, treeMult?: number) => {
+        const args = [seed, size || 6, height || 16, oreMult || 1.0, treeMult || 1.0];
+        console.log("Bridge regenerating world:", args);
+        return call('regenerateWorld', args);
+    },
+    quitApplication: async () => {
+        return call('quitApplication', []);
     }
 };
 

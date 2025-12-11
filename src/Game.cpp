@@ -81,17 +81,25 @@ void Game::InitUI() {
             std::cout << "Final args: " << args.dump() << std::endl;
             
             uint32_t seed = 12345;
-            if (args.is_array() && !args.empty() && args[0].is_number()) {
-                seed = args[0].get<uint32_t>();
-                std::cout << "Extracted seed: " << seed << std::endl;
+            OreForged::WorldConfig config; // Uses defaults (size=9, height=32)
+            config.size = 9;
+            config.height = 32;
+
+            if (args.is_array()) {
+                if (args.size() > 0 && args[0].is_number()) seed = args[0].get<uint32_t>();
+                if (args.size() > 1 && args[1].is_number()) config.size = args[1].get<int>();
+                if (args.size() > 2 && args[2].is_number()) config.height = args[2].get<int>();
+                if (args.size() > 3 && args[3].is_number()) config.oreMult = args[3].get<float>();
+                if (args.size() > 4 && args[4].is_number()) config.treeMult = args[4].get<float>();
+                
+                std::cout << "Regen Params: Seed=" << seed << " Size=" << config.size 
+                          << " Height=" << config.height << " OreMult=" << config.oreMult 
+                          << " TreeMult=" << config.treeMult << std::endl;
             } else {
-                std::cout << "Failed to extract seed, using default: " << seed << std::endl;
-                if (args.is_array() && !args.empty()) {
-                    std::cout << "args[0] type: " << args[0].type_name() << ", value: " << args[0].dump() << std::endl;
-                }
+                std::cout << "Failed to extract args, using default seed: " << seed << std::endl;
             }
             
-            std::cout << "Regenerating world with seed: " << seed << std::endl;
+            std::cout << "Regenerating world..." << std::endl;
             
             // Signal UI to clear all chunks first
             UpdateFacet("clear_chunks", "true");
@@ -99,11 +107,11 @@ void Game::InitUI() {
             // Small delay to let UI process the clear signal
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
             
-            // Regenerate world
-            m_state.world.Regenerate(seed);
+            // Regenerate world with config
+            m_state.world.Regenerate(seed, config);
             
-            // Force immediate update of chunks (11x11 grid to show island + water)
-            m_state.world.LoadChunksAroundPosition(0, 0, 5);
+            // Load 5x5 grid for substantial world feel
+            m_state.world.LoadChunksAroundPosition(0, 0, 2);
             
             // Send new chunks to UI with small delays to prevent crash
             auto chunks = m_state.world.GetLoadedChunks();
@@ -183,8 +191,8 @@ void Game::Update() {
     // Generate initial chunks on first tick
     if (m_state.tickCount == 1) {
         std::cout << "Generating world chunks..." << std::endl;
-        // Load a 11x11 grid of chunks around origin (0, 0) to show island + water
-        m_state.world.LoadChunksAroundPosition(0, 0, 5);
+        // Load 5x5 grid around origin
+        m_state.world.LoadChunksAroundPosition(0, 0, 2);
         std::cout << "Generated " << m_state.world.GetLoadedChunks().size() << " chunks" << std::endl;
     }
     

@@ -12,6 +12,7 @@ interface VoxelRendererProps {
     autoRotate?: boolean;
     rotationSpeed?: number;
     currentTool?: ToolTier;
+    isToolBroken?: boolean;
     onResourceCollected?: (type: BlockType, count: number) => void;
 }
 
@@ -19,6 +20,7 @@ export function VoxelRenderer({
     autoRotate = false,
     rotationSpeed = 0,
     currentTool = ToolTier.HAND,
+    isToolBroken = false,
     onResourceCollected
 }: VoxelRendererProps) {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -36,12 +38,14 @@ export function VoxelRenderer({
     const particleSystemRef = useRef<HitParticleSystem | null>(null);
     // Refs for props to access in event listeners
     const currentToolRef = useRef(currentTool);
+    const isToolBrokenRef = useRef(isToolBroken);
     const onResourceCollectedRef = useRef(onResourceCollected);
 
     useEffect(() => {
         currentToolRef.current = currentTool;
+        isToolBrokenRef.current = isToolBroken;
         onResourceCollectedRef.current = onResourceCollected;
-    }, [currentTool, onResourceCollected]);
+    }, [currentTool, isToolBroken, onResourceCollected]);
 
     const outlineBoxRef = useRef<THREE.LineSegments | null>(null);
 
@@ -223,7 +227,10 @@ export function VoxelRenderer({
             if (blockType === BlockType.Air || blockType === BlockType.Bedrock) return;
 
             // Check if we can mine this block with current tool
-            const damage = getDamage(currentToolRef.current);
+            // If broken, damage is significantly reduced (e.g. 30%)
+            const baseDamage = getDamage(currentToolRef.current);
+            const damage = baseDamage * (isToolBrokenRef.current ? 0.3 : 1.0);
+
             if (!canMineBlock(blockType, currentToolRef.current)) {
                 return;
             }

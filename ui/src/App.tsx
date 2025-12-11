@@ -7,6 +7,7 @@ import { Slider } from './oreui/Slider';
 import Panel from './oreui/Panel';
 import { ResourceManifest } from './game/ui/ResourceManifest';
 import { ObjectiveTracker } from './game/ui/ObjectiveTracker';
+import { CurrentToolDisplay } from './game/ui/CurrentToolDisplay';
 import { BlockType, ToolTier, CraftingRecipe } from './game/data/GameDefinitions';
 
 function App() {
@@ -23,7 +24,9 @@ function App() {
 
     // Gameplay state
     const [inventory, setInventory] = useState<Record<number, number>>({});
+    const [totalMined, setTotalMined] = useState(0);
     const [currentTool, setCurrentTool] = useState<ToolTier>(ToolTier.HAND);
+    const [toolHealth, setToolHealth] = useState(100);
 
     useEffect(() => {
         console.log('App mounted, checking uiReady');
@@ -97,6 +100,13 @@ function App() {
     };
 
     const handleResourceCollected = (type: BlockType, count: number) => {
+        setTotalMined(prev => prev + count);
+
+        // Tool Durability Logic
+        if (currentTool !== ToolTier.HAND) {
+            setToolHealth(prev => Math.max(0, prev - 1));
+        }
+
         setInventory(prev => ({
             ...prev,
             [type]: (prev[type] || 0) + count
@@ -118,11 +128,29 @@ function App() {
             return newInv;
         });
 
-        // Upgrade tool
+        // Upgrade tool: Reset health to 100
         setCurrentTool(recipe.result);
+        setToolHealth(100);
 
         // Play sound? (Future)
         console.log(`Crafted ${recipe.displayName}!`);
+    };
+
+    const handleRepair = () => {
+        // Determine cost (Simple for now: 3 of base material)
+        let costType = BlockType.Wood;
+        let costAmount = 3;
+
+        if (currentTool === ToolTier.STONE) costType = BlockType.Stone;
+        if (currentTool === ToolTier.IRON) costType = BlockType.Iron;
+        if (currentTool === ToolTier.GOLD) costType = BlockType.Gold;
+        if (currentTool === ToolTier.DIAMOND) costType = BlockType.Diamond;
+
+        if ((inventory[costType] || 0) >= costAmount) {
+            setInventory(prev => ({ ...prev, [costType]: prev[costType] - costAmount }));
+            setToolHealth(100);
+            console.log("Repaired Tool!");
+        }
     };
 
     return (
@@ -131,6 +159,7 @@ function App() {
                 autoRotate={isRotating}
                 rotationSpeed={rotationSpeed}
                 currentTool={currentTool}
+                isToolBroken={toolHealth <= 0}
                 onResourceCollected={handleResourceCollected}
             />
 
@@ -153,8 +182,13 @@ function App() {
             <ObjectiveTracker
                 currentTool={currentTool}
                 inventory={inventory}
+                totalMined={totalMined}
+                toolHealth={toolHealth}
                 onCraft={handleCraft}
+                onRepair={handleRepair}
             />
+
+            <CurrentToolDisplay currentTool={currentTool} toolHealth={toolHealth} />
 
             <ResourceManifest inventory={inventory} />
 

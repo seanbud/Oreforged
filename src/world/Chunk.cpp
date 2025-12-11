@@ -44,10 +44,10 @@ bool Chunk::IsValidPosition(int x, int y, int z) const {
 // ============================================================================
 
 namespace {
-    const int SEA_LEVEL = 5;
+    const int SEA_LEVEL = 8;
     const int MIN_HEIGHT = 2;
-    const int MAX_HEIGHT = 12;
-    const float ISLAND_RADIUS = 50.0f;
+    const int MAX_HEIGHT = 19; // Further reduced 
+    const float ISLAND_RADIUS = 35.0f; // Shrink island
     
     // Simple hash-based noise function
     float noise2D(int x, int z, uint32_t seed) {
@@ -152,8 +152,20 @@ namespace {
         }
         
         // Calculate final height
-        // Sea level is 5, island ranges from 5 to 11 (6 blocks of variation)
-        int height = SEA_LEVEL + static_cast<int>(heightFactor * 6.0f);
+        // Sea level is 8, base range +5 (very controlled)
+        int height = SEA_LEVEL + static_cast<int>(heightFactor * 5.0f);
+
+        // Stone Towers (Dynamic Verticality - Subtle)
+        float towerNoise = smoothNoise(worldX / 5.0f, worldZ / 5.0f, seed + 8888);
+        
+        if (towerNoise > 0.90f) {
+            // Pillars/Plateaus
+            float towerH = (towerNoise - 0.90f) * 40.0f; // Max +4 blocks
+            height += static_cast<int>(towerH);
+        } else if (towerNoise > 0.75f) {
+             // Gentle rise
+             height += 1;
+        }
         
         // Ensure beaches exist - areas just above water should be flatter
         if (height == SEA_LEVEL || height == SEA_LEVEL + 1) {
@@ -283,14 +295,16 @@ void Chunk::GenerateOres(uint32_t seed) {
             float oreNoise = noise2D(worldX, worldZ, seed + 6000);
             
             // Place ore blocks on surface with different rarities
-            if (oreNoise > 0.98f) {
-                m_blocks[x][surfaceY + 1][z].type = BlockType::Diamond; // Very rare
-            } else if (oreNoise > 0.95f) {
-                m_blocks[x][surfaceY + 1][z].type = BlockType::Gold; // Rare
-            } else if (oreNoise > 0.90f) {
-                m_blocks[x][surfaceY + 1][z].type = BlockType::Iron; // Uncommon
-            } else if (oreNoise > 0.85f) {
-                m_blocks[x][surfaceY + 1][z].type = BlockType::Coal; // Common
+            // Place ore blocks on surface with different rarities (HOARDER MODE)
+            // Way less ores seen.
+            if (oreNoise > 0.998f) {
+                m_blocks[x][surfaceY + 1][z].type = BlockType::Diamond; // 0.2% (Extremely Rare)
+            } else if (oreNoise > 0.99f) {
+                m_blocks[x][surfaceY + 1][z].type = BlockType::Gold; // 1.0% (Very Rare)
+            } else if (oreNoise > 0.97f) {
+                m_blocks[x][surfaceY + 1][z].type = BlockType::Iron; // 3.0% (Rare)
+            } else if (oreNoise > 0.94f) {
+                m_blocks[x][surfaceY + 1][z].type = BlockType::Coal; // 6.0% (Uncommon)
             }
         }
     }

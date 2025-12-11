@@ -200,7 +200,7 @@ export function VoxelRenderer({
 
             const chunkData = chunk.chunkData;
             if (blockX < 0 || blockX >= chunkData.size ||
-                blockY < 0 || blockY >= chunkData.size ||
+                blockY < 0 || blockY >= chunkData.height ||
                 blockZ < 0 || blockZ >= chunkData.size) return null;
 
             const blockIndex = blockY * chunkData.size * chunkData.size + blockZ * chunkData.size + blockX;

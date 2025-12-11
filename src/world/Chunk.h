@@ -9,8 +9,8 @@ namespace OreForged {
 
 class Chunk {
 public:
-    static constexpr int SIZE = 16;   // 16x16 blocks per chunk
-    static constexpr int HEIGHT = 16; // 16 blocks tall (deeper world)
+    static constexpr int SIZE = 9;   // 9x9 blocks per chunk (tiny footprint)
+    static constexpr int HEIGHT = 32; // 32 blocks tall (dynamic verticality)
     
     Chunk(int chunkX, int chunkZ);
     

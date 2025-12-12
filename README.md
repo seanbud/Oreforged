@@ -10,8 +10,6 @@
 
 ## 🎮 Download & Play
 
-**Want to play the game?
-
 1. Go to the [**Releases Page**](https://github.com/seanbud/Oreforged/releases).
 2. Download the latest `OreForged_Windows.zip`.
 3. Extract the zip file.

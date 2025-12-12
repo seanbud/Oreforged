@@ -1,22 +1,29 @@
 ```typescript
 // ui/src/design/tokens.ts
 export const Colors = {
-    Grey: {
-        Base: '#C6C6C6',
-        Light: '#FFFFFF',
-        Dark: '#373737',
-        Text: '#3C3C3C'
-    },
     Green: {
-        Base: '#5EAF4E',
-        Light: '#7FD96F',
-        Dark: '#4E8F3E'
+        Base: '#3c8527',
+        Hover: '#4ca032',
+        Pressed: '#2a641c',
+        BorderLight: '#5bb344',
+        BorderDark: '#1e4d13',
     },
     Red: {
-        Base: '#E60F58',
-        Light: '#FF3F88',
-        Dark: '#B60F48'
-    }
+        Base: '#c0392b',
+        Hover: '#e74c3c',
+        Pressed: '#a93226',
+        BorderLight: '#e74c3c',
+        BorderDark: '#922b21',
+    },
+    Grey: {
+        Base: '#313233',
+        Dark: '#1e1e1f',
+        Light: '#48494a',
+        Text: '#e0e0e0',
+        TextDim: '#aaaaaa',
+    },
+    White: '#ffffff',
+    Black: '#000000',
 };
 ```
 
@@ -146,6 +153,46 @@ const style = useFacetMap(tick => ({
 **Props**:
 - `style?: CSSProperties | Facet<CSSProperties>` - Static or dynamic styles
 - Extends `React.HTMLAttributes<HTMLDivElement>`
+
+### TitleCard
+
+Overlay displaying game info and controls.
+
+```tsx
+import TitleCard from './oreui/TitleCard';
+
+<TitleCard />
+```
+
+### ProgressBar
+
+Minecraft-style progress bar with beveled borders and "chunky" aesthetic.
+
+```tsx
+import { ProgressBar } from './oreui/ProgressBar';
+
+<ProgressBar 
+    progress={progress} // number 0-100
+    label="Generating..." // Optional label
+/>
+```
+
+**Props**:
+- `progress: number` - Current progress (0-100)
+- `label?: string` - Optional text label
+
+### ResourceManifest
+
+HUD element tracking inventory counts.
+
+```tsx
+import { ResourceManifest } from './game/ui/ResourceManifest';
+
+<ResourceManifest 
+    inventory={inventory}    // Record<BlockType, number>
+    totalMined={totalMined}  // number
+/>
+```
 
 ## Usage Examples
 

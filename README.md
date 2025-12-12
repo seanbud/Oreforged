@@ -4,7 +4,7 @@
   <img src="docs/images/logo.png" alt="OreForged" width="300">
 </p>
 
-> A high-performance C++ game engine demo showcasing **OreUI** - a React-based UI library inspired by Mojang's Bedrock Edition UI architecture.
+> A game demo built in a custom engine. C++ handles game logic, React handles UI, and Three.js handles rendering.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -14,20 +14,18 @@
 
 ## 🎯 Project Goals
 
-**OreForged** is an open-source "toy engine" designed to:
+**OreForged** is a "made from scratch" engine experiment exploring:
 
-1. **Showcase OreUI**: Demonstrate best practices for high-performance game UIs using the Facet pattern
-2. **Inspire Contribution**: Serve as a reference implementation to standardize game UI development
-3. **Optimize for Fun**: Tight gameplay loop with minimal scope - "Collect → Upgrade → Repeat"
+1. **Facet Pattern UI**: Implementing Mojang's data-driven UI architecture (as seen in Bedrock Edition).
+2. **Decoupled Rendering**: A lightweight C++ game engine running separately from the visual layer.
+3. **Simple Gameplay**: A focused "Collect → Upgrade → Repeat" loop to test the architecture.
 
 ## ✨ Key Features
 
 -   **Zero React Re-renders**: Direct DOM updates via Facets bypass React reconciliation
 -   **60 TPS Game Loop**: Smooth C++ game logic running in parallel with UI
--   **Two-Way Data Binding**: Efficient C++ ↔ JavaScript communication
--   **Mojang-Inspired**: Patterns extracted from Minecraft Bedrock Edition
--   **Type-Safe**: Full TypeScript support with generics
--   **Pixelated Aesthetic**: Minecraft-style UI components
+-   **Mojang-Inspired Facets**: Using the same open-source library pattern as Minecraft Bedrock
+-   **Engine Demo & Fun Game**: A technical showcase that's actually fun to play!
 
 ## 🚀 Quick Start
 

@@ -138,13 +138,25 @@ cmake .. && cmake --build . --config Release
 ### Testing
 
 ```bash
-# Run the application
-build\bin\Release\OreForged.exe
-
 # Test UI changes
 cd ui
 pnpm dev  # Hot reload for UI development
 ```
+
+### Packaging
+
+To create a release zip (Windows):
+
+```powershell
+# Creates OreForged_Windows.zip in the root directory
+./package_release.ps1
+```
+
+This script will:
+1. Rebuild the entire project
+2. Create a clean `release/` directory
+3. Copy the executable and UI assets
+4. Bundle them into a verified zip file
 
 ## Pull Request Process
 

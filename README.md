@@ -27,7 +27,18 @@
 -   **Mojang-Inspired Facets**: Using the same open-source library pattern as Minecraft Bedrock
 -   **Engine Demo & Fun Game**: A technical showcase that's actually fun to play!
 
-## 🚀 Quick Start
+## 🎮 Download & Play
+
+**No coding required!** Just want to play the game?
+
+1. Go to the [**Releases Page**](https://github.com/seanbud/Oreforged/releases).
+2. Download the latest `OreForged_Windows.zip`.
+3. Extract the zip file.
+4. Run `OreForged.exe`.
+
+## 🛠️ Development Setup
+
+If you want to build the engine yourself or contribute code:
 
 ### Prerequisites
 
@@ -39,7 +50,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/Oreforged.git
+git clone https://github.com/seanbud/Oreforged.git
 cd Oreforged
 
 # Build everything (UI + C++)
@@ -187,8 +198,8 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## 🔗 Links
 
 -   [Documentation](docs/)
--   [Issue Tracker](https://github.com/yourusername/Oreforged/issues)
--   [Discussions](https://github.com/yourusername/Oreforged/discussions)
+-   [Issue Tracker](https://github.com/seanbud/Oreforged/issues)
+-   [Discussions](https://github.com/seanbud/Oreforged/discussions)
 
 ---
 

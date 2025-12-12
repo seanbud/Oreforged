@@ -37,6 +37,7 @@ add_executable(OreForged
     src/world/Chunk.cpp
     src/world/World.h
     src/world/World.cpp
+    src/app.rc
 )
 
 

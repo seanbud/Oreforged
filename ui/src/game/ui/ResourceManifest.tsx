@@ -4,9 +4,10 @@ import { BlockType } from '../data/GameDefinitions';
 
 interface ResourceManifestProps {
     inventory: Record<number, number>;
+    totalMined: number;
 }
 
-export const ResourceManifest: React.FC<ResourceManifestProps> = ({ inventory }) => {
+export const ResourceManifest: React.FC<ResourceManifestProps> = ({ inventory, totalMined }) => {
     // Filter for collected items
     const items = Object.entries(inventory)
         .filter(([_, count]) => count > 0)
@@ -44,7 +45,7 @@ export const ResourceManifest: React.FC<ResourceManifestProps> = ({ inventory })
         }
     };
 
-    const totalBlocks = Object.values(inventory).reduce((acc, val) => acc + val, 0);
+    // const totalBlocks = Object.values(inventory).reduce((acc, val) => acc + val, 0); // This line is removed as totalMined is now a prop
 
     return (
         <div style={{
@@ -69,27 +70,29 @@ export const ResourceManifest: React.FC<ResourceManifestProps> = ({ inventory })
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                boxShadow: '0 4px 8px rgba(0,0,0,0.5)'
+                boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
+                opacity: 1,
+                transition: 'all 0.3s ease'
             }}>
                 <div style={{ fontSize: '10px' }}>AVAILABLE</div>
-                <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{totalBlocks} BLOCKS</div>
+                <div style={{ fontSize: '14px', fontWeight: 'bold' }}>{totalMined} BLOCKS</div>
             </div>
 
             {/* Existing List */}
             {items.map(([type, count]) => {
                 const blockType = Number(type) as BlockType;
                 const color = getColor(blockType);
-                const isLow = blockType === BlockType.Wood && count <= 2;
+                // Removed red background logic as per request
 
                 return (
                     <div key={type} style={{
                         display: 'flex',
                         alignItems: 'center',
-                        backgroundColor: isLow ? 'rgba(80, 20, 20, 0.9)' : 'rgba(20, 20, 20, 0.8)',
+                        backgroundColor: 'rgba(20, 20, 20, 0.8)',
                         padding: '4px 8px',
                         justifyContent: 'flex-end',
                         gap: '10px',
-                        borderRight: `4px solid ${isLow ? '#FF0000' : color}`,
+                        borderRight: `4px solid ${color}`,
                         transition: 'all 0.3s ease'
                     }}>
                         {/* Icon Block */}

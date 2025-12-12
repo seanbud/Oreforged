@@ -51,6 +51,7 @@ const FramedLabel: React.FC<FramedLabelProps> = ({ label, icon, color = Colors.W
                     zIndex: 100,
                     fontSize: '10px',
                     textAlign: 'center',
+                    whiteSpace: 'pre-wrap',
                     boxShadow: '0 4px 8px rgba(0,0,0,0.5)'
                 }}>
                     {tooltip}
@@ -61,27 +62,26 @@ const FramedLabel: React.FC<FramedLabelProps> = ({ label, icon, color = Colors.W
 };
 
 interface StatsStripProps {
-    worldSize: number;
-    worldHeight: number;
-    oreDensity: number;
-    treeDensity: number;
+    energyLevel: number;
+    oreLevel: number;
+    treeLevel: number;
     lowResources?: boolean;
 }
 
 export const StatsStrip: React.FC<StatsStripProps> = ({
-    worldSize,
-    worldHeight,
-    oreDensity,
-    treeDensity,
+    energyLevel,
+    oreLevel,
+    treeLevel,
     lowResources
 }) => {
-    // Fuzzy Logic for World Size
-    let sizeLabel = "Unknown";
-    if (worldSize <= 9) sizeLabel = "Tiny";
-    else if (worldSize <= 11) sizeLabel = "Small";
-    else if (worldSize <= 13) sizeLabel = "Medium";
-    else if (worldSize <= 15) sizeLabel = "Large";
-    else sizeLabel = "Massive";
+    // Fuzzy Logic for World Size (based on energyLevel)
+    // 1-3 = Tiny, 4-5 = Small, 6 = Medium, 7 = Large, 8+ = Very Large
+    let sizeLabel = "Tiny";
+    if (energyLevel >= 8) sizeLabel = "Very Large";
+    else if (energyLevel >= 7) sizeLabel = "Large";
+    else if (energyLevel >= 6) sizeLabel = "Medium";
+    else if (energyLevel >= 4) sizeLabel = "Small";
+    else sizeLabel = "Tiny";
 
     return (
         <div style={{
@@ -93,8 +93,8 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
         }}>
             {/* World Stats Label */}
             <FramedLabel
-                label={`World: ${sizeLabel} (H:${worldHeight})`}
-                tooltip={`Size: ${worldSize}x${worldSize} chunks\nMax Height: ${worldHeight} blocks\nOre Mult: x${oreDensity.toFixed(1)}\nTree Mult: x${treeDensity.toFixed(1)}`}
+                label={`${sizeLabel} Island`}
+                tooltip={`TREES: (Lvl ${treeLevel})\nORE FIND: (Lvl ${oreLevel})\nSIZE: (Lvl ${energyLevel})`}
                 icon={<div style={{ width: '12px', height: '12px', backgroundColor: '#4CAF50', border: '1px solid #000' }}></div>}
             />
 
@@ -103,7 +103,7 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
                 <FramedLabel
                     label="Low Wood!"
                     color="#FF5555"
-                    tooltip="You are running low on wood.\nConsider regenerating the world\nto get more trees."
+                    tooltip={`You are running low on wood.\nConsider regenerating the world\nto get more trees.`}
                     icon={<div style={{ fontSize: '12px' }}>⚠️</div>}
                 />
             )}

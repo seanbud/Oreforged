@@ -103,7 +103,7 @@ export const ObjectiveTracker: React.FC<ObjectiveTrackerProps> = ({ currentTool,
     // Build cost string (Show ALL costs now)
     const costElements = Array.from(nextRecipe.cost.entries()).map(([block, required]) => {
         const current = inventory[block] || 0;
-        const name = BlockType[block].toUpperCase().slice(0, 3);
+        const name = BlockType[block].toUpperCase(); // Removed .slice(0, 3)
         const isMet = current >= required;
         return (
             <span key={block} style={{ color: isMet ? Colors.Green.BorderLight : Colors.Grey.TextDim, marginRight: '8px' }}>

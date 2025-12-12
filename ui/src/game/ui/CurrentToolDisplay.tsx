@@ -6,14 +6,21 @@ import { ToolIcon } from './ToolIcon';
 interface CurrentToolDisplayProps {
     currentTool: ToolTier;
     toolHealth: number;
+    damageMultiplier?: number;
 }
 
-export const CurrentToolDisplay: React.FC<CurrentToolDisplayProps> = ({ currentTool, toolHealth }) => {
+export const CurrentToolDisplay: React.FC<CurrentToolDisplayProps> = ({ currentTool, toolHealth, damageMultiplier = 1.0 }) => {
     // Stage 0: Don't show for Hand
     if (currentTool === ToolTier.HAND) return null;
 
     const def = TOOL_DEFINITIONS[currentTool];
     let name = def ? def.name.toUpperCase().replace(" PICKAXE", "_PICK") : "UNKNOWN";
+    const baseDamage = def ? def.damage : 0;
+    const finalDamage = baseDamage * damageMultiplier;
+
+    // Display damage as integer if whole, or 1 decimal if fractional
+    const damageDisplay = Number.isInteger(finalDamage) ? finalDamage.toString() : finalDamage.toFixed(1);
+
     const isBroken = toolHealth <= 0;
 
     // Pinkish hue for broken
@@ -66,7 +73,7 @@ export const CurrentToolDisplay: React.FC<CurrentToolDisplayProps> = ({ currentT
                 }}>
                     <div style={{ fontWeight: 'bold', marginBottom: '4px', color: textColor }}>{name}</div>
                     <div>Durability: {Math.floor(toolHealth)}%</div>
-                    <div>Status: {isBroken ? "BROKEN" : "Active"}</div>
+                    <div>{isBroken ? "Status: BROKEN" : `DMG: ${damageDisplay}`}</div>
                 </div>
             )}
 

@@ -295,10 +295,9 @@ function App() {
                         <TitleCard />
                         <div style={{ paddingTop: '4px' }}>
                             <StatsStrip
-                                worldSize={9 + modLevels.energy * 2}
-                                worldHeight={32 + modLevels.energy * 2}
-                                oreDensity={1.0 + modLevels.ore * 0.5}
-                                treeDensity={1.0 + modLevels.tree * 0.5}
+                                energyLevel={modLevels.energy}
+                                oreLevel={modLevels.ore}
+                                treeLevel={modLevels.tree}
                                 lowResources={worldStats.woodCount <= 2}
                             />
                         </div>
@@ -306,7 +305,10 @@ function App() {
                 )}
 
                 {/* Top Right - Resources (Using ResourceManifest) */}
-                {!isMenuOpen && <ResourceManifest inventory={inventory} />}
+                {!isMenuOpen && <ResourceManifest
+                    inventory={inventory}
+                    totalMined={totalMined}
+                />}
 
                 {/* Bottom Right - Tool Status / Objective Tracker */}
                 {!isMenuOpen && (
@@ -322,7 +324,11 @@ function App() {
                                 onRepair={handleRepair}
                             />
                         </div>
-                        <CurrentToolDisplay currentTool={currentTool} toolHealth={toolHealth} />
+                        <CurrentToolDisplay
+                            currentTool={currentTool}
+                            toolHealth={toolHealth}
+                            damageMultiplier={damageMultiplier}
+                        />
                     </>
                 )}
 
@@ -417,19 +423,20 @@ function App() {
 
                                 <Button
                                     onClick={handleRegenerate}
-                                    disabled={isGenerating || (spentOnCurrentGen < 30 && totalMined < 30)}
-                                    variant="grey" // Overridden by style below
+                                    disabled={isGenerating || totalMined < Math.max(0, 30 - spentOnCurrentGen)}
+                                    variant="grey"
                                     style={{
                                         marginTop: '10px',
                                         width: '100%',
-                                        backgroundColor: (spentOnCurrentGen >= 30 || totalMined >= 30) ? '#4CAF50' : '#555',
+                                        backgroundColor: (Math.max(0, 30 - spentOnCurrentGen) === 0 || totalMined >= Math.max(0, 30 - spentOnCurrentGen)) ? '#4CAF50' : '#555',
                                         color: 'white',
-                                        opacity: (isGenerating || (spentOnCurrentGen < 30 && totalMined < 30)) ? 0.7 : 1,
+                                        opacity: (isGenerating || totalMined < Math.max(0, 30 - spentOnCurrentGen)) ? 0.7 : 1,
                                         border: '2px solid #000',
-                                        boxShadow: (spentOnCurrentGen >= 30 || totalMined >= 30) ? 'inset -2px -2px 0px rgba(0,0,0,0.5), inset 2px 2px 0px rgba(255,255,255,0.3)' : 'none'
+                                        textShadow: '1px 1px 0px #000',
+                                        boxShadow: (Math.max(0, 30 - spentOnCurrentGen) === 0 || totalMined >= Math.max(0, 30 - spentOnCurrentGen)) ? 'inset -2px -2px 0px rgba(0,0,0,0.5), inset 2px 2px 0px rgba(255,255,255,0.3)' : 'none'
                                     }}
                                 >
-                                    {isGenerating ? "Regenerating..." : `Regenerate World (Cost: ${spentOnCurrentGen >= 30 ? 0 : 30} Blocks)`}
+                                    {isGenerating ? "Regenerating..." : `Regenerate World (Cost: ${Math.max(0, 30 - spentOnCurrentGen)} Blocks)`}
                                 </Button>
                             </div>
 
@@ -468,7 +475,7 @@ function App() {
                                     {/* Reordered: Trees -> Ore -> Energy -> Damage */}
                                     {renderModButton("Trees", "tree", "+Tree Density")}
                                     {renderModButton("Ore Find", "ore", "+Ore Density")}
-                                    {renderModButton("Energy", "energy", "+Size & Height")}
+                                    {renderModButton("Size", "energy", "+Size & Height")}
                                     {renderModButton("DMG", "damage", "+Mining Damage")}
                                 </div>
                             </div>

@@ -47,7 +47,8 @@ jobs:
         copy build\bin\Release\OreForged.exe release\
         if (Test-Path build\bin\Release\WebView2Loader.dll) { copy build\bin\Release\WebView2Loader.dll release\ }
         xcopy /E /I ui\dist release\ui
-        Compress-Archive -Path release\* -DestinationPath OreForged_Windows.zip
+        if (Test-Path OreForged_Windows.zip) { Remove-Item OreForged_Windows.zip }
+        tar -a -c -f OreForged_Windows.zip -C release .
         
     - name: Upload Artifact
       uses: actions/upload-artifact@v4

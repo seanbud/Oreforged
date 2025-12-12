@@ -1,10 +1,13 @@
 #include "Game.h"
 #include "webview.h"
 #include <iostream>
-#include <filesystem>
-#include <algorithm>
 #ifdef _WIN32
   #include <Windows.h>
+#elif __linux__
+  #include <unistd.h>
+  #include <limits.h>
+#elif __APPLE__
+  #include <mach-o/dyld.h>
 #endif
 #include <nlohmann/json.hpp>
 
@@ -134,10 +137,24 @@ void Game::InitUI() {
         }
     }, nullptr);
 
-    // Point to local file relative to executable
+    // Portable executable path finding
+    std::filesystem::path exePath;
+
+#ifdef _WIN32
     char path[MAX_PATH];
     GetModuleFileNameA(NULL, path, MAX_PATH);
-    std::filesystem::path exePath(path);
+    exePath = std::filesystem::path(path);
+#elif __linux__
+    char result[PATH_MAX];
+    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+    exePath = std::filesystem::path(std::string(result, (count > 0) ? count : 0));
+#elif __APPLE__
+    char path[1024];
+    uint32_t size = sizeof(path);
+    if (_NSGetExecutablePath(path, &size) == 0)
+        exePath = std::filesystem::path(path);
+#endif
+
     auto exeDir = exePath.parent_path();
     auto htmlPath = exeDir / "ui" / "index.html";
     

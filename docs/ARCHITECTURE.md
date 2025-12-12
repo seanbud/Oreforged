@@ -87,9 +87,37 @@ class FacetManager {
 - `ui/src/App.tsx` - Main application
 - `ui/src/components/*.tsx` - UI components
 - `ui/src/design/tokens.ts` - Design system
+- `ui/src/layouts/GameLayout.tsx` - Layout & z-index management
 
 **Responsibilities**:
 - Render UI structure
+- Manage layering (Game World vs HUD)
+
+### 5. UI Layout Layer
+
+**File**: `ui/src/layouts/GameLayout.tsx`
+
+The specific layering system used to ensure UI sits correctly on top of the generic webview background.
+
+```tsx
+<GameLayout>
+    {/* Z-Index 0: The 3D World */}
+    <GameLayer zIndex={0}>
+        <VoxelRenderer />
+    </GameLayer>
+
+    {/* Z-Index 10: The HUD (pointer-events: none by default) */}
+    <HUDLayer>
+        <TitleCard /> {/* pointer-events: auto */}
+        <Inventory />
+    </HUDLayer>
+</GameLayout>
+```
+
+**Key Components**:
+
+-   **GameLayer**: Wrapper for full-screen layers.
+-   **HUDLayer**: High z-index layer that passes clicks through to the game by default (`pointer-events: none`), but allows children to catch clicks (`pointer-events: auto`).
 6. facet.set(123)
    ↓
 7. FastDiv.observe() → element.style.transform = ...

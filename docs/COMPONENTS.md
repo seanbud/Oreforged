@@ -34,7 +34,7 @@ export const Colors = {
 Container with beveled borders and shadow.
 
 ```tsx
-import Panel from './components/Panel';
+import Panel from './oreui/Panel';
 
 <Panel style={{ width: '400px' }}>
     <h1>Title</h1>
@@ -49,7 +49,7 @@ import Panel from './components/Panel';
 Clickable button with hover and active states.
 
 ```tsx
-import Button from './components/Button';
+import Button from './oreui/Button';
 
 <Button 
     variant="green"  // 'green' | 'red'
@@ -69,7 +69,7 @@ import Button from './components/Button';
 Boolean switch with label.
 
 ```tsx
-import Toggle from './components/Toggle';
+import Toggle from './oreui/Toggle';
 
 const [enabled, setEnabled] = useState(false);
 
@@ -90,7 +90,7 @@ const [enabled, setEnabled] = useState(false);
 Text input field with optional label.
 
 ```tsx
-import Input from './components/Input';
+import Input from './oreui/Input';
 
 const [value, setValue] = useState('');
 
@@ -111,7 +111,7 @@ const [value, setValue] = useState('');
 Range slider with live value updates.
 
 ```tsx
-import Slider from './components/Slider';
+import Slider from './oreui/Slider';
 
 const [distance, setDistance] = useState(12);
 
@@ -180,6 +180,8 @@ import { ProgressBar } from './oreui/ProgressBar';
 **Props**:
 - `progress: number` - Current progress (0-100)
 - `label?: string` - Optional text label
+
+## Game Widgets
 
 ### ResourceManifest
 

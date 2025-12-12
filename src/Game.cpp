@@ -3,7 +3,9 @@
 #include <iostream>
 #include <filesystem>
 #include <algorithm>
-#include <Windows.h>
+#ifdef _WIN32
+  #include <Windows.h>
+#endif
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;

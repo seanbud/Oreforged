@@ -51,7 +51,7 @@ function App() {
     const [rotationSpeed, setRotationSpeed] = useState(0.00); // Default speed 0 to start? Main handles it in VoxelRenderer? Main defaults 0.05? NO main defaults 0.
 
     // Regeneration State
-    const [isGenerating, setIsGenerating] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(true); // Start true to hide initial world state
     const [progress, setProgress] = useState(0);
 
     // Modifiers State (Roguelite Progression) - MATCHING MAIN
@@ -254,6 +254,8 @@ function App() {
     // Initial Load
     useEffect(() => {
         bridge.uiReady();
+        // Show generating overlay immediately
+        setIsGenerating(true);
         setTimeout(() => {
             const seedNum = parseInt(seed) || 12345;
 
@@ -263,7 +265,9 @@ function App() {
             }
 
             bridge.regenerateWorld(seedNum, 16, 32, 1.0, 1.0, 0.08); // Level 0: very tiny starting island
-        }, 500);
+            // Hide generating overlay after world loads
+            setTimeout(() => setIsGenerating(false), 800);
+        }, 100); // Reduced from 500ms - just enough for overlay to show
     }, []);
 
     // Watch for cheat code when seed changes
@@ -350,6 +354,32 @@ function App() {
                     </div>
                 )}
 
+                {/* Regeneration Overlay - Only in GameLayer, not on top of menu */}
+                {isGenerating && (
+                    <div style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: Colors.Black,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 100,
+                    }}>
+                        <Panel style={{ padding: '30px', textAlign: 'center' }}>
+                            <h2 style={{
+                                fontFamily: Styles.Font.Family,
+                                fontSize: '18px',
+                                marginBottom: '20px',
+                                textShadow: Styles.Shadows.Text(Colors.Black),
+                                color: Colors.White
+                            }}>Generating World...</h2>
+                            <div style={{ width: '300px' }}>
+                                <ProgressBar progress={progress} />
+                            </div>
+                        </Panel>
+                    </div>
+                )}
+
                 {/* Top Right - Resources (Using ResourceManifest) */}
                 {!isMenuOpen && <ResourceManifest
                     inventory={inventory}
@@ -378,29 +408,7 @@ function App() {
                     </>
                 )}
 
-                {/* Regeneration Overlay */}
-                {isGenerating && (
-                    <div style={{
-                        position: 'absolute',
-                        top: 0, left: 0, right: 0, bottom: 0,
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 2000,
-                        color: 'white'
-                    }}>
-                        <h2 style={{
-                            fontFamily: '"Minecraft", "Press Start 2P", monospace',
-                            textShadow: '3px 3px 0px #000',
-                            marginBottom: '20px'
-                        }}>Regenerating World...</h2>
-                        <div style={{ width: '300px' }}>
-                            <ProgressBar progress={progress} />
-                        </div>
-                    </div>
-                )}
+
 
                 {/* Pause Menu - Restored Compact Layout from Main */}
                 {isMenuOpen && (

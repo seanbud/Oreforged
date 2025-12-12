@@ -1,9 +1,13 @@
 
 // Game Configuration Constants
 
-// Interaction
-export const DRAG_THRESHOLD_PIXELS = 5; // Left click (Pan/Mine)
-export const RIGHT_CLICK_DRAG_THRESHOLD_PIXELS = 3; // Right click (Rotate/Focus) - More sensitive
+// Interaction - Viewport-Relative Drag Thresholds (% of min viewport dimension)
+export const BASE_DRAG_THRESHOLD_RATIO = 0.025; // 2.5% of viewport (e.g., ~25px on 1000px screen)
+export const MAX_DRAG_THRESHOLD_RATIO = 0.10; // 10% of viewport (e.g., ~100px on 1000px screen)
+export const RAPID_CLICK_MS = 500; // Time window to count as rapid consecutive click
+export const THRESHOLD_INCREMENT_RATIO = 0.01; // Added per consecutive click (1% per click)
+
+export const RIGHT_CLICK_DRAG_THRESHOLD_RATIO = 0.003; // Right click (Rotate/Focus) - More sensitive
 export const DRAG_THRESHOLD_TIME_MS = 200;
 
 // Camera

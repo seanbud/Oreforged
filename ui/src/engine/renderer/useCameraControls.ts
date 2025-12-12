@@ -2,8 +2,11 @@ import { useCallback, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import {
     ROTATION_SENSITIVITY,
-    DRAG_THRESHOLD_PIXELS,
-    RIGHT_CLICK_DRAG_THRESHOLD_PIXELS,
+    BASE_DRAG_THRESHOLD_RATIO,
+    MAX_DRAG_THRESHOLD_RATIO,
+    RAPID_CLICK_MS,
+    THRESHOLD_INCREMENT_RATIO,
+    RIGHT_CLICK_DRAG_THRESHOLD_RATIO,
     DRAG_THRESHOLD_TIME_MS,
     SLIDE_DURATION_MS,
     CAMERA_SMOOTHING,
@@ -53,6 +56,11 @@ export function useCameraControls({
     const previousMousePosition = useRef({ x: 0, y: 0 });
     const activeButtonRef = useRef<number | null>(null);
 
+    // Dynamic Threshold State
+    const currentDragThresholdRatio = useRef(BASE_DRAG_THRESHOLD_RATIO);
+    const lastClickTimeRef = useRef(0);
+    const consecutiveClicksRef = useRef(0);
+
     // Panning / Momentum
     const velocity = useRef({ x: 0, z: 0 });
     const velocityHistory = useRef<{ x: number, z: number }[]>([]);
@@ -73,6 +81,24 @@ export function useCameraControls({
         // Stop momentum on click
         velocity.current = { x: 0, z: 0 };
         velocityHistory.current = [];
+
+        // DYNAMIC DRAG THRESHOLD LOGIC (Left Click Only)
+        if (e.button === 0) {
+            const now = Date.now();
+            const timeSinceLast = now - lastClickTimeRef.current;
+
+            if (timeSinceLast < RAPID_CLICK_MS) {
+                consecutiveClicksRef.current++;
+            } else {
+                consecutiveClicksRef.current = 0;
+            }
+
+            // Calculate threshold ratio based on consecutive clicks
+            const bonusRatio = consecutiveClicksRef.current * THRESHOLD_INCREMENT_RATIO;
+            currentDragThresholdRatio.current = Math.min(MAX_DRAG_THRESHOLD_RATIO, BASE_DRAG_THRESHOLD_RATIO + bonusRatio);
+        } else {
+            currentDragThresholdRatio.current = BASE_DRAG_THRESHOLD_RATIO;
+        }
 
         // RIGHT CLICK PIVOT LOGIC
         // Set rotation pivot to the block at screen center (no slide animation)
@@ -124,8 +150,14 @@ export function useCameraControls({
                 Math.pow(currentPos.y - dragStartPosRef.current.y, 2)
             );
 
-            let threshold = DRAG_THRESHOLD_PIXELS;
-            if (activeButtonRef.current === 2) threshold = RIGHT_CLICK_DRAG_THRESHOLD_PIXELS;
+            // Calculate viewport-relative threshold
+            const rect = renderer.domElement.getBoundingClientRect();
+            const viewportSize = Math.min(rect.width, rect.height);
+
+            let thresholdRatio = currentDragThresholdRatio.current;
+            if (activeButtonRef.current === 2) thresholdRatio = RIGHT_CLICK_DRAG_THRESHOLD_RATIO;
+
+            const threshold = viewportSize * thresholdRatio;
 
             if (dist > threshold) {
                 isDraggingRef.current = true;
@@ -198,14 +230,21 @@ export function useCameraControls({
             Math.pow(e.clientY - dragStartPosRef.current.y, 2)
         );
 
-        // TAP Actions
-        let threshold = DRAG_THRESHOLD_PIXELS;
-        if (e.button === 2) threshold = RIGHT_CLICK_DRAG_THRESHOLD_PIXELS;
+        // TAP Actions - Calculate viewport-relative threshold
+        const rect = renderer?.domElement.getBoundingClientRect();
+        const viewportSize = rect ? Math.min(rect.width, rect.height) : 1000;
+
+        let thresholdRatio = currentDragThresholdRatio.current;
+        if (e.button === 2) thresholdRatio = RIGHT_CLICK_DRAG_THRESHOLD_RATIO;
+
+        const threshold = viewportSize * thresholdRatio;
 
         if (!isDraggingRef.current && dist < threshold && duration < DRAG_THRESHOLD_TIME_MS) {
             // Left Tap: Mine
             if (e.button === 0 && onTap) {
                 onTap(e);
+                // Update last click time ONLY on valid tap
+                lastClickTimeRef.current = Date.now();
             }
             // Right Tap: REMOVED (Merged into Drag-Focus)
             // But if they just tap without dragging, should it still focus?

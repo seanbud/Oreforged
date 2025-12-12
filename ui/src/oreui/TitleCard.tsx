@@ -36,10 +36,10 @@ const TitleCard: React.FC = () => {
                 lineHeight: '1.5',
                 paddingLeft: '5px'
             }}>
-                <div>• Left Click: Mine</div>
-                <div>• Click+Hold: Pan</div>
-                <div>• Right Click: Rotate</div>
-                <div>• Wheel: Zoom</div>
+                <div>• Left Click - hit block</div>
+                <div>• Left Click (hold) - pan camera</div>
+                <div>• Right click (hold) - rotate camera</div>
+                <div>• Mouse wheel - zoom</div>
             </div>
         </div>
     );

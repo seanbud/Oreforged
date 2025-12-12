@@ -8,9 +8,15 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-<p align="left">
-  <img src="https://i.gyazo.com/d1b056037b992ac613ebb0ca22aae0ab.gif" alt="OreForged GIF" width="300">
-</p>
+## 🎮 Download & Play
+
+**Want to play the game?
+
+1. Go to the [**Releases Page**](https://github.com/seanbud/Oreforged/releases).
+2. Download the latest `OreForged_Windows.zip`.
+3. Extract the zip file.
+4. Run `OreForged.exe`.
+
 
 ## 🎯 Project Goals
 
@@ -19,6 +25,10 @@
 1. **Facet Pattern UI**: Implementing Mojang's data-driven UI architecture (as seen in Bedrock Edition).
 2. **Decoupled Rendering**: A lightweight C++ game engine running separately from the visual layer.
 3. **Simple Gameplay**: A focused "Collect → Upgrade → Repeat" loop to test the architecture.
+ 
+<p align="left">
+  <img src="https://i.gyazo.com/d1b056037b992ac613ebb0ca22aae0ab.gif" alt="OreForged GIF" width="300">
+</p>
 
 ## ✨ Key Features
 
@@ -27,14 +37,6 @@
 -   **Mojang-Inspired Facets**: Using the same open-source library pattern as Minecraft Bedrock
 -   **Engine Demo & Fun Game**: A technical showcase that's actually fun to play!
 
-## 🎮 Download & Play
-
-**No coding required!** Just want to play the game?
-
-1. Go to the [**Releases Page**](https://github.com/seanbud/Oreforged/releases).
-2. Download the latest `OreForged_Windows.zip`.
-3. Extract the zip file.
-4. Run `OreForged.exe`.
 
 ## 🛠️ Development Setup
 

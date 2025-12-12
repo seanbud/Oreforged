@@ -67,7 +67,7 @@ void World::GenerateChunk(int chunkX, int chunkZ) {
     
     // Create new chunk with current config
     auto chunk = std::make_unique<Chunk>(chunkX, chunkZ, m_config.size, m_config.height);
-    chunk->Generate(m_seed, m_config.oreMult, m_config.treeMult);
+    chunk->Generate(m_seed, m_config.oreMult, m_config.treeMult, m_config.islandFactor);
     
     m_chunks[pos] = std::move(chunk);
 }

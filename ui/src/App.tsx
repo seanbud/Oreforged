@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { VoxelRenderer } from './game/VoxelRenderer';
 import { bridge } from './engine/bridge';
-import { Colors } from './design/tokens';
+import { Colors, Styles } from './design/tokens';
 import { CraftingRecipe, BlockType, ToolTier, ModLevels, Modifier } from './game/data/GameDefinitions';
 import { GameLayout, GameLayer, HUDLayer } from './layouts/GameLayout';
 import Button from './oreui/Button';
@@ -42,6 +42,7 @@ function App() {
     const [currentTool, setCurrentTool] = useState<ToolTier>(ToolTier.HAND);
     const [toolHealth, setToolHealth] = useState(100);
     const [isToolBroken, setIsToolBroken] = useState(false);
+    const [toastMessage, setToastMessage] = useState<string>('');
 
     // Generation Config
     // Start with a random seed
@@ -203,13 +204,31 @@ function App() {
 
         // Main Logic for Params
         const seedNum = parseInt(currentSeedStr) || 12345;
-        const nextSize = 9 + modLevels.energy * 2;
+
+        // Map Size Scaling (Levels 0-6: fixed at 16, 7-12: expand)
+        let nextSize = 16; // Fixed for early levels
+        if (modLevels.energy >= 7) {
+            nextSize = 16 + (modLevels.energy - 6); // 17, 18, 19, 20, 21, 22
+        }
+
+        // Island Factor: Quadratic 0-6 within size 16 (slow growth at start)
+        let islandFactor = 1.0;
+        if (modLevels.energy <= 6) {
+            // Use quadratic curve for slower initial growth
+            const minFactor = 0.08;  // Very tiny starting island (perfect)
+            const maxFactor = 0.55;  // Medium island at level 6 (reduced from 0.65)
+            const t = modLevels.energy / 6;  // 0 to 1
+            // Quadratic easing (slower at start, faster at end)
+            islandFactor = minFactor + (t * t) * (maxFactor - minFactor);
+        }
+        // Levels 7+ use default factor 1.0 (island fills the expanding map)
+
         const nextHeight = 32 + modLevels.energy * 2;
         const oreMult = 1.0 + modLevels.ore * 0.5;
         const treeMult = 1.0 + modLevels.tree * 0.5;
         const dmgMult = 1.0 + modLevels.damage * 0.5;
 
-        bridge.regenerateWorld(seedNum, nextSize, nextHeight, oreMult, treeMult);
+        bridge.regenerateWorld(seedNum, nextSize, nextHeight, oreMult, treeMult, islandFactor);
 
         // Apply runtime modifiers
         setRunModifiers([{ damage: dmgMult }]);
@@ -237,11 +256,26 @@ function App() {
         bridge.uiReady();
         setTimeout(() => {
             const seedNum = parseInt(seed) || 12345;
-            // Defaults to match Main logic if we ran regen:
-            // But for initial load, maybe just defaults:
-            bridge.regenerateWorld(seedNum, 9, 32, 1.0, 1.0);
+
+            // Cheat code: seed 25565 gives you 25565 blocks
+            if (seedNum === 25565) {
+                setTotalMined(25565);
+            }
+
+            bridge.regenerateWorld(seedNum, 16, 32, 1.0, 1.0, 0.08); // Level 0: very tiny starting island
         }, 500);
     }, []);
+
+    // Watch for cheat code when seed changes
+    useEffect(() => {
+        const seedNum = parseInt(seed) || 0;
+        if (seedNum === 25565 && totalMined !== 25565) {
+            setTotalMined(25565);
+            // Show toast notification
+            setToastMessage('🎮 Cheat Enabled! 25565 blocks granted.');
+            setTimeout(() => setToastMessage(''), 3000);
+        }
+    }, [seed]);
 
     // Helper to render mod button (Exact Copy from Main style logic)
     const renderModButton = (label: string, type: keyof typeof modLevels, benefitDesc: string) => {
@@ -519,6 +553,33 @@ function App() {
                     </div >
                 )
                 }
+
+                {/* Toast Notification */}
+                {toastMessage && (
+                    <div style={{
+                        position: 'fixed',
+                        top: '20px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: Colors.Green.Base,
+                        color: Colors.White,
+                        padding: '12px 20px',
+                        border: `${Styles.Border.Width} ${Styles.Border.Style} ${Colors.Green.BorderLight}`,
+                        borderBottom: `${Styles.Border.Width} ${Styles.Border.Style} ${Colors.Green.BorderDark}`,
+                        borderRight: `${Styles.Border.Width} ${Styles.Border.Style} ${Colors.Green.BorderDark}`,
+                        boxShadow: Styles.Shadows.Bevel(Colors.Green.BorderLight, Colors.Green.BorderDark),
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        fontFamily: Styles.Font.Family,
+                        textShadow: Styles.Shadows.Text(Colors.Black),
+                        imageRendering: Styles.Font.Pixelated,
+                        zIndex: 10000,
+                        animation: 'slideDown 0.3s ease-out',
+                        pointerEvents: 'none'
+                    }}>
+                        {toastMessage}
+                    </div>
+                )}
             </HUDLayer >
         </GameLayout >
     );

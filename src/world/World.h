@@ -12,6 +12,7 @@ struct WorldConfig {
     int height = 32;  // Increased height for better terrain
     float oreMult = 1.0f;
     float treeMult = 1.0f;
+    float islandFactor = 1.0f; // Scales island radius within chunk size
     // float damageMult stored/handled in App.tsx? No, maybe World needs to know for Block Health?
     // Actually Block Health is handled in UI for now (VoxelRenderer/App).
     // So WorldConfig just needs generation params.

@@ -89,26 +89,20 @@ namespace {
         }
         return total / maxValue;
     }
-    // Island radial falloff (Restored & Tuned)
-    float getIslandFalloff(int worldX, int worldZ, int chunkSize) {
-        float distance = std::sqrt(static_cast<float>(worldX * worldX + worldZ * worldZ));
-        
-        // Dynamic radius based on world size
-        // e.g. Size 12 -> Center at 6, Radius ~5
-        // e.g. Size 3 -> Center at 1.5, Radius ~1.5
-        // Current coordinate system: 0 to Size
-        // We need distance from Center of the generated area!
-        // But World Coordinates are chunkX*size + x.
-        // If we only load 1 chunk at 0,0, Center is Size/2.
-        
-        float centerX = chunkSize / 2.0f;
-        float centerZ = chunkSize / 2.0f;
+    // Island radial falloff (for small chunk sizes loaded in 5x5 grids)
+    float getIslandFalloff(int worldX, int worldZ, int chunkSize, float islandFactor) {
+        // For small chunks, we load a 5x5 grid centered at chunk (0,0)
+        // Center the island at world coordinates (0, 0) for symmetry
+        float centerX = 0.0f;
+        float centerZ = 0.0f;
         
         float dx = worldX - centerX;
         float dz = worldZ - centerZ;
         float distFromCenter = std::sqrt(dx*dx + dz*dz);
         
-        float baseRadius = chunkSize * 0.45f; // usage 90% of width
+        // Scale radius to account for multi-chunk loading (5x5 grid)
+        // For a 5x5 grid, we want the radius to be ~2.5 chunks from center
+        float baseRadius = chunkSize * 2.5f * islandFactor; // Radius in world blocks
         
         if (distFromCenter > baseRadius + (chunkSize * 0.2f)) return 0.0f;
         
@@ -126,7 +120,7 @@ namespace {
     }
     
     // Global Island Logic
-    int calculateHeight(int worldX, int worldZ, uint32_t seed, int chunkHeight, int chunkSize, int localX, int localZ) {
+    int calculateHeight(int worldX, int worldZ, uint32_t seed, int chunkHeight, int chunkSize, int localX, int localZ, float islandFactor) {
         float islandFalloff = 1.0f;
         
         // For standard worlds (Size 32+), create a LARGE island centered at (16,16)
@@ -154,9 +148,9 @@ namespace {
                  islandFalloff = 1.0f - fade;
              }
         }
-        else if (chunkSize < 20) {
-            // Tiny challenge worlds
-            islandFalloff = getIslandFalloff(worldX, worldZ, chunkSize);
+        else if (chunkSize < 23) {
+            // Standard scaling islands (up to Level 12, Size 22)
+            islandFalloff = getIslandFalloff(worldX, worldZ, chunkSize, islandFactor);
             if (islandFalloff < 0.05f) return SEA_LEVEL - 1;
         }
         
@@ -169,29 +163,35 @@ namespace {
         float heightFactor = (combinedNoise - 0.5f) * 2.0f; // -1 to +1
         heightFactor *= islandFalloff;
         
+        // Scale height variation with island size (smaller islands = flatter)
+        heightFactor *= islandFactor;
+        
         // Flatten tops
         if (heightFactor > 0.3f) {
             heightFactor = 0.3f + (heightFactor - 0.3f) * 0.5f; 
         }
         
-        // Base Height calculation - ensure most land is ABOVE sea level
+        // Base Height calculation - flatter for small islands
         float hRatio = chunkHeight / 32.0f;
-        float varianceScale = (hRatio < 1.0f) ? hRatio : 1.0f; 
-        int height = SEA_LEVEL + 1 + static_cast<int>(heightFactor * 5.0f * varianceScale); // +1 boost (was +2)
+        float varianceScale = (hRatio < 1.0f) ? hRatio : 1.0f;
+        // Reduce base height variation (was 5.0f)
+        int height = SEA_LEVEL + 1 + static_cast<int>(heightFactor * 3.0f * varianceScale);
         
-        // Pillars/Towers (Restored)
-        float towerNoise = smoothNoise(worldX / 5.0f, worldZ / 5.0f, seed + 8888);
-        if (towerNoise > 0.90f) { 
-            float towerH = (towerNoise - 0.90f) * 15.0f * varianceScale;
-            height += static_cast<int>(towerH);
-        } else if (towerNoise > 0.80f) {
-             height += 1;
+        // Pillars/Towers - only on larger islands (islandFactor > 0.5)
+        if (islandFactor > 0.5f) {
+            float towerNoise = smoothNoise(worldX / 5.0f, worldZ / 5.0f, seed + 8888);
+            if (towerNoise > 0.90f) { 
+                float towerH = (towerNoise - 0.90f) * 15.0f * varianceScale * islandFactor;
+                height += static_cast<int>(towerH);
+            } else if (towerNoise > 0.80f) {
+                 height += 1;
+            }
         }
 
         // Beach - only at edges near water
         if (height == SEA_LEVEL + 1 || height == SEA_LEVEL + 2) {
             float beachNoise = noise2D(worldX / 3, worldZ / 3, seed + 3000);
-            if (beachNoise < 0.45f) height = SEA_LEVEL; // Increased chance for water/beach
+            if (beachNoise < 0.45f) height = SEA_LEVEL;
         }
         
         return std::max(MIN_HEIGHT, height);
@@ -204,7 +204,7 @@ namespace {
     }
 }
 
-void Chunk::Generate(uint32_t seed, float oreMult, float treeMult) {
+void Chunk::Generate(uint32_t seed, float oreMult, float treeMult, float islandFactor) {
     // Determine effective max height (leave 1 block for trees/player?)
     const int GEN_MAX_HEIGHT = std::min(30, m_height - 1); 
 
@@ -216,7 +216,7 @@ void Chunk::Generate(uint32_t seed, float oreMult, float treeMult) {
             // Note: If size changes, the world coordinates scale differently if we use 
             // chunkX * size. This matches "Smaller Levels" visually.
             
-            int height = calculateHeight(worldX, worldZ, seed, m_height, m_size, x, z);
+            int height = calculateHeight(worldX, worldZ, seed, m_height, m_size, x, z, islandFactor);
             height = std::min(height, GEN_MAX_HEIGHT);
 
             bool isSand = shouldBeSand(worldX, worldZ, height, seed);

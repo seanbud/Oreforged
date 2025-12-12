@@ -74,14 +74,23 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
     treeLevel,
     lowResources
 }) => {
-    // Fuzzy Logic for World Size (based on energyLevel)
-    // 1-3 = Tiny, 4-5 = Small, 6 = Medium, 7 = Large, 8+ = Very Large
-    let sizeLabel = "Tiny";
-    if (energyLevel >= 8) sizeLabel = "Very Large";
-    else if (energyLevel >= 7) sizeLabel = "Large";
-    else if (energyLevel >= 6) sizeLabel = "Medium";
-    else if (energyLevel >= 4) sizeLabel = "Small";
-    else sizeLabel = "Tiny";
+    // Unique Size Labels per Level (Max Level 12)
+    const sizeLabels = [
+        "Tiny Island",        // Lvl 0
+        "Very Small Island",  // Lvl 1
+        "Small Island",       // Lvl 2
+        "Small-Mid Island",   // Lvl 3
+        "Medium Island",      // Lvl 4
+        "Big Island",         // Lvl 5
+        "Bigger Island",      // Lvl 6
+        "Large Island",       // Lvl 7 (map starts expanding)
+        "Larger Island",      // Lvl 8
+        "Huge Island",        // Lvl 9
+        "Massive Island",     // Lvl 10
+        "Epic Landmass",      // Lvl 11
+        "Mega Continent"      // Lvl 12 (max)
+    ];
+    let sizeLabel = sizeLabels[Math.min(energyLevel, sizeLabels.length - 1)] || "Unknown";
 
     return (
         <div style={{

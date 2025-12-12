@@ -50,8 +50,8 @@ export const bridge = {
             (window as any).uiReady();
         }
     },
-    regenerateWorld: async (seed: number, size?: number, height?: number, oreMult?: number, treeMult?: number) => {
-        const args = [seed, size || 6, height || 16, oreMult || 1.0, treeMult || 1.0];
+    regenerateWorld: async (seed: number, size?: number, height?: number, oreMult?: number, treeMult?: number, islandFactor?: number) => {
+        const args = [seed, size || 21, height || 32, oreMult || 1.0, treeMult || 1.0, islandFactor || 1.0];
         console.log("Bridge regenerating world:", args);
         return call('regenerateWorld', args);
     },

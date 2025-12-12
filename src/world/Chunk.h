@@ -25,8 +25,8 @@ public:
     int GetHeight() const { return m_height; }
 
     // Generate chunk terrain
-    // Config: oreMultiplier, treeMultiplier
-    void Generate(uint32_t seed, float oreMult = 1.0f, float treeMult = 1.0f);
+    // Config: oreMultiplier, treeMultiplier, islandFactor
+    void Generate(uint32_t seed, float oreMult = 1.0f, float treeMult = 1.0f, float islandFactor = 1.0f);
     
     // Serialize chunk data for sending to UI
     std::string Serialize() const;

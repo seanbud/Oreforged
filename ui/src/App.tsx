@@ -203,13 +203,31 @@ function App() {
 
         // Main Logic for Params
         const seedNum = parseInt(currentSeedStr) || 12345;
-        const nextSize = 9 + modLevels.energy * 2;
+
+        // Map Size Scaling (Levels 0-6: fixed at 16, 7-12: expand)
+        let nextSize = 16; // Fixed for early levels
+        if (modLevels.energy >= 7) {
+            nextSize = 16 + (modLevels.energy - 6); // 17, 18, 19, 20, 21, 22
+        }
+
+        // Island Factor: Quadratic 0-6 within size 16 (slow growth at start)
+        let islandFactor = 1.0;
+        if (modLevels.energy <= 6) {
+            // Use quadratic curve for slower initial growth
+            const minFactor = 0.08;  // Very tiny starting island (perfect)
+            const maxFactor = 0.55;  // Medium island at level 6 (reduced from 0.65)
+            const t = modLevels.energy / 6;  // 0 to 1
+            // Quadratic easing (slower at start, faster at end)
+            islandFactor = minFactor + (t * t) * (maxFactor - minFactor);
+        }
+        // Levels 7+ use default factor 1.0 (island fills the expanding map)
+
         const nextHeight = 32 + modLevels.energy * 2;
         const oreMult = 1.0 + modLevels.ore * 0.5;
         const treeMult = 1.0 + modLevels.tree * 0.5;
         const dmgMult = 1.0 + modLevels.damage * 0.5;
 
-        bridge.regenerateWorld(seedNum, nextSize, nextHeight, oreMult, treeMult);
+        bridge.regenerateWorld(seedNum, nextSize, nextHeight, oreMult, treeMult, islandFactor);
 
         // Apply runtime modifiers
         setRunModifiers([{ damage: dmgMult }]);
@@ -237,9 +255,7 @@ function App() {
         bridge.uiReady();
         setTimeout(() => {
             const seedNum = parseInt(seed) || 12345;
-            // Defaults to match Main logic if we ran regen:
-            // But for initial load, maybe just defaults:
-            bridge.regenerateWorld(seedNum, 9, 32, 1.0, 1.0);
+            bridge.regenerateWorld(seedNum, 16, 32, 1.0, 1.0, 0.08); // Level 0: very tiny starting island
         }, 500);
     }, []);
 

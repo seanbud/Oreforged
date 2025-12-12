@@ -91,10 +91,11 @@ void Game::InitUI() {
                 if (args.size() > 2 && args[2].is_number()) config.height = args[2].get<int>();
                 if (args.size() > 3 && args[3].is_number()) config.oreMult = args[3].get<float>();
                 if (args.size() > 4 && args[4].is_number()) config.treeMult = args[4].get<float>();
+                if (args.size() > 5 && args[5].is_number()) config.islandFactor = args[5].get<float>();
                 
                 std::cout << "Regen Params: Seed=" << seed << " Size=" << config.size 
                           << " Height=" << config.height << " OreMult=" << config.oreMult 
-                          << " TreeMult=" << config.treeMult << std::endl;
+                          << " TreeMult=" << config.treeMult << " IslandFactor=" << config.islandFactor << std::endl;
             } else {
                 std::cout << "Failed to extract args, using default seed: " << seed << std::endl;
             }

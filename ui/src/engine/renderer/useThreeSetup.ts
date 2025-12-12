@@ -46,7 +46,7 @@ export function useThreeSetup(): ThreeSetup {
         scene.add(ambientLight);
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1.8);
-        directionalLight.position.set(50, 100, 50);
+        directionalLight.position.set(-50, 100, 50);
         directionalLight.castShadow = true;
 
         // Shadow properties

@@ -3,10 +3,11 @@ import * as THREE from 'three';
 
 interface DamageNumber {
     id: number;
-    damage: number;
+    value: number | string;
     x: number;
     y: number;
     timestamp: number;
+    color?: string;
 }
 
 interface DamageNumberOverlayProps {
@@ -17,7 +18,7 @@ let damageNumberId = 0;
 const damageNumbers: DamageNumber[] = [];
 
 // Global function to spawn damage numbers
-export function spawnDamageNumber(worldPos: THREE.Vector3, damage: number, camera: THREE.Camera, container: HTMLElement) {
+export function spawnDamageNumber(worldPos: THREE.Vector3, value: number | string, camera: THREE.Camera, container: HTMLElement, color?: string) {
     // Project world position to screen space
     const screenPos = worldPos.clone().project(camera);
 
@@ -27,10 +28,11 @@ export function spawnDamageNumber(worldPos: THREE.Vector3, damage: number, camer
 
     damageNumbers.push({
         id: damageNumberId++,
-        damage,
+        value,
         x,
         y,
         timestamp: Date.now(),
+        color
     });
 }
 
@@ -68,6 +70,7 @@ export function DamageNumberOverlay({ camera }: DamageNumberOverlayProps) {
                 const age = (Date.now() - num.timestamp) / 1000; // 0 to 1
                 const yOffset = age * 50; // Rise up
                 const opacity = Math.max(0, 1 - age);
+                const isText = typeof num.value === 'string';
 
                 return (
                     <div
@@ -77,15 +80,16 @@ export function DamageNumberOverlay({ camera }: DamageNumberOverlayProps) {
                             left: num.x,
                             top: num.y - yOffset,
                             transform: 'translate(-50%, -50%)',
-                            color: 'white',
-                            fontSize: '18px',
+                            color: num.color || 'white',
+                            fontSize: isText ? '14px' : '18px',
                             fontWeight: 'bold',
+                            fontFamily: isText ? 'monospace' : 'inherit',
                             textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
                             opacity,
                             animation: 'damageNumberBounce 0.3s ease-out',
                         }}
                     >
-                        {num.damage}
+                        {num.value}
                     </div>
                 );
             })}

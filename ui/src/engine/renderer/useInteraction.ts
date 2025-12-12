@@ -16,6 +16,7 @@ interface InteractionProps {
     isToolBroken: boolean;
     damageMultiplier: number;
     onResourceCollected?: (type: BlockType, count: number) => void;
+    triggerShake?: (intensity: number) => void;
 }
 
 export function useInteraction({
@@ -27,7 +28,8 @@ export function useInteraction({
     currentTool,
     isToolBroken,
     damageMultiplier,
-    onResourceCollected
+    onResourceCollected,
+    triggerShake
 }: InteractionProps) {
     const outlineBoxRef = useRef<THREE.LineSegments | null>(null);
     const oreHealthRef = useRef<OreHealthSystem | null>(null);
@@ -35,10 +37,10 @@ export function useInteraction({
     const currentMousePosition = useRef<{ x: number, y: number } | null>(null);
 
     // Refs for safe access in event listeners/callbacks
-    const propsRef = useRef({ currentTool, isToolBroken, damageMultiplier, onResourceCollected });
+    const propsRef = useRef({ currentTool, isToolBroken, damageMultiplier, onResourceCollected, triggerShake });
     useEffect(() => {
-        propsRef.current = { currentTool, isToolBroken, damageMultiplier, onResourceCollected };
-    }, [currentTool, isToolBroken, damageMultiplier, onResourceCollected]);
+        propsRef.current = { currentTool, isToolBroken, damageMultiplier, onResourceCollected, triggerShake };
+    }, [currentTool, isToolBroken, damageMultiplier, onResourceCollected, triggerShake]);
 
     // Initialize Helpers
     useEffect(() => {
@@ -124,10 +126,20 @@ export function useInteraction({
         if (!hit) return;
 
         const { chunk, chunkData, blockX, blockY, blockZ, blockIndex, blockType, worldPos } = hit;
-        const { currentTool, isToolBroken, damageMultiplier, onResourceCollected } = propsRef.current;
+        const { currentTool, isToolBroken, damageMultiplier, onResourceCollected, triggerShake } = propsRef.current;
 
         if (blockType === BlockType.Air || blockType === BlockType.Bedrock) return;
-        if (!canMineBlock(blockType, currentTool)) return;
+
+        // UNBREAKABLE FEEDBACK
+        if (!canMineBlock(blockType, currentTool)) {
+            // Trigger feedback
+            if (triggerShake) triggerShake(0.15); // Restored shake intensity (was 0.2, now 0.15)
+            if (camera) spawnDamageNumber(worldPos, 0, camera, containerRef.current, "#ff8800"); // Orange "0"
+
+            // Still damage the tool (count 0 means no resource given, but tool was used)
+            onResourceCollected?.(blockType, 0);
+            return;
+        }
 
         const baseDamage = getDamage(currentTool);
         const damage = baseDamage * (isToolBroken ? 0.3 : 1.0) * damageMultiplier;

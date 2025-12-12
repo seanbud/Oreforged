@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useThreeSetup } from '../engine/renderer/useThreeSetup';
 import { useChunkRenderer } from '../engine/renderer/useChunkRenderer';
 import { useInteraction } from '../engine/renderer/useInteraction';
@@ -14,6 +14,7 @@ interface VoxelRendererProps {
     damageMultiplier?: number;
     onResourceCollected?: (type: BlockType, count: number) => void;
     onWorldUpdate?: (stats: { woodCount: number }) => void;
+    externalShakeTrigger?: number; // Timestamp to trigger shake
 }
 
 export function VoxelRenderer({
@@ -23,7 +24,8 @@ export function VoxelRenderer({
     isToolBroken = false,
     damageMultiplier = 1.0,
     onResourceCollected,
-    onWorldUpdate
+    onWorldUpdate,
+    externalShakeTrigger
 }: VoxelRendererProps) {
 
     // 1. Setup Three.js (Scene, Camera, Renderer)
@@ -32,8 +34,35 @@ export function VoxelRenderer({
     // 2. Setup Chunk Rendering (Meshes, Materials, Facet Listeners)
     const { chunksRef, countBlocks } = useChunkRenderer(scene);
 
+    // 4. Setup Camera Controls (Orbit, Pan, Zoom)
+    // Create interaction ref for delayed access
+    const interactionRef = useRef<{ onTap: (e: MouseEvent) => void, getHoveredBlock: any } | null>(null);
+
+    const { update: updateCamera, triggerShake } = useCameraControls({
+        camera,
+        renderer,
+        autoRotate,
+        rotationSpeed,
+        onTap: (e) => interactionRef.current?.onTap(e), // Delayed access
+        getHoveredBlock: (x, y) => interactionRef.current?.getHoveredBlock(x, y)
+    });
+
+    // Update ref so interaction can use it?
+    // No, interaction is created below.
+    // We can just pass `triggerShake` to interaction!
+    // But interaction assumes it returns `onTap`, which controls uses.
+    // So controls needs `onTap` which is created by interaction.
+    // Controls uses onTap inside `handleMouseUp`.
+
+    // Refactor strategy:
+    // 1. Create interactionRef to hold the result of useInteraction (onTap, etc).
+    // 2. Call useCameraControls, passing a proxy function that calls interactionRef.current.onTap.
+    // 3. Call useInteraction, passing triggerShake (which we got from controls).
+    // 4. Assign interaction result to interactionRef.
+
+
     // 3. Setup Interaction (Mining, Particles, Raycasting)
-    const { onTap, update: updateInteraction, getHoveredBlock } = useInteraction({
+    const interaction = useInteraction({
         scene,
         camera,
         renderer,
@@ -42,19 +71,22 @@ export function VoxelRenderer({
         currentTool,
         isToolBroken,
         damageMultiplier,
-        onResourceCollected
+        onResourceCollected,
+        triggerShake // Pass the function we got from controls
     });
 
-    // 4. Setup Camera Controls (Orbit, Pan, Zoom)
-    // Note: onTap is passed here to distinguish between Drag (Pan) and Click (Mine)
-    const { update: updateCamera } = useCameraControls({
-        camera,
-        renderer,
-        autoRotate,
-        rotationSpeed,
-        onTap,
-        getHoveredBlock
-    });
+    useEffect(() => {
+        interactionRef.current = interaction;
+    }, [interaction]);
+
+    const { update: updateInteraction } = interaction;
+
+    // External Shake Trigger
+    useEffect(() => {
+        if (externalShakeTrigger && externalShakeTrigger > 0) {
+            triggerShake(0.5); // Default intensity for external events
+        }
+    }, [externalShakeTrigger, triggerShake]);
 
     // 5. Polling for World Stats (e.g. Wood Count)
     useEffect(() => {

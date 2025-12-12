@@ -15,6 +15,7 @@ import { ResourceManifest } from './game/ui/ResourceManifest';
 import { Slider } from './oreui/Slider';
 import { ProgressBar } from './oreui/ProgressBar';
 import { StatsStrip } from './game/ui/menu/StatsStrip';
+import VignetteOverlay from './game/ui/VignetteOverlay';
 
 function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -67,6 +68,7 @@ function App() {
 
     // New: World Stats for HUD alerts
     const [worldStats, setWorldStats] = useState({ woodCount: 100 }); // Default high to avoid flash
+    const [shakeTrigger, setShakeTrigger] = useState(0);
 
     // Timer Logic - REMOVED (Unused in HUD)
     /*
@@ -124,9 +126,12 @@ function App() {
         // Reduce tool health
         if (currentTool !== ToolTier.HAND && !isToolBroken) {
             setToolHealth(prev => {
-                const damage = 1.0;
+                const damage = 2.0; // Break faster (was 1.0)
                 const newHealth = Math.max(0, prev - damage);
-                if (newHealth <= 0) setIsToolBroken(true);
+                if (newHealth <= 0) {
+                    setIsToolBroken(true);
+                    setShakeTrigger(Date.now());
+                }
                 return newHealth;
             });
         }
@@ -285,10 +290,17 @@ function App() {
                     damageMultiplier={damageMultiplier}
                     onResourceCollected={handleResourceCollected}
                     onWorldUpdate={setWorldStats}
+                    externalShakeTrigger={shakeTrigger}
                 />
             </GameLayer>
 
             <HUDLayer>
+                {/* Vignette Overlay */}
+                <VignetteOverlay
+                    healthRatio={toolHealth / 100}
+                    isBroken={isToolBroken}
+                />
+
                 {/* Top Left - Title & Controls */}
                 {!isMenuOpen && (
                     <div style={{ position: 'absolute', top: '20px', left: '20px', pointerEvents: 'auto', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>

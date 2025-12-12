@@ -307,6 +307,13 @@ export function useCameraControls({
         };
     }, [renderer, handleMouseDown, handleMouseMove, handleMouseUp, handleWheel]);
 
+    // Shake State
+    const shakeIntensityRef = useRef(0);
+
+    const triggerShake = useCallback((intensity: number) => {
+        shakeIntensityRef.current = Math.min(shakeIntensityRef.current + intensity, 2.0);
+    }, []);
+
     // Loop
     const update = useCallback(() => {
         if (!camera) return;
@@ -356,7 +363,18 @@ export function useCameraControls({
         camera.position.copy(targetPosition.current).add(offset);
         camera.lookAt(targetPosition.current);
 
+        // 6. Apply Shake
+        if (shakeIntensityRef.current > 0.01) {
+            const shake = shakeIntensityRef.current;
+            camera.position.x += (Math.random() - 0.5) * shake;
+            camera.position.y += (Math.random() - 0.5) * shake;
+            camera.position.z += (Math.random() - 0.5) * shake;
+            shakeIntensityRef.current *= 0.9;
+        } else {
+            shakeIntensityRef.current = 0;
+        }
+
     }, [camera, autoRotate, rotationSpeed]);
 
-    return { update };
+    return { update, triggerShake };
 }

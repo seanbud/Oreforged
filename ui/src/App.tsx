@@ -256,6 +256,16 @@ function App() {
         bridge.uiReady();
         // Show generating overlay immediately
         setIsGenerating(true);
+        setProgress(0);
+
+        // Simulated progress animation
+        const interval = setInterval(() => {
+            setProgress(prev => {
+                if (prev >= 90) return 90;
+                return prev + 5;
+            });
+        }, 50);
+
         setTimeout(() => {
             const seedNum = parseInt(seed) || 12345;
 
@@ -265,9 +275,15 @@ function App() {
             }
 
             bridge.regenerateWorld(seedNum, 16, 32, 1.0, 1.0, 0.08); // Level 0: very tiny starting island
-            // Hide generating overlay after world loads
-            setTimeout(() => setIsGenerating(false), 800);
-        }, 100); // Reduced from 500ms - just enough for overlay to show
+
+            // Finish loading sequence
+            setTimeout(() => {
+                clearInterval(interval);
+                setProgress(100);
+                // Short delay to show 100% before hiding
+                setTimeout(() => setIsGenerating(false), 200);
+            }, 600);
+        }, 100); // Reduced delay before generation starts
     }, []);
 
     // Watch for cheat code when seed changes

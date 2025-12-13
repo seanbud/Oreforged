@@ -112,6 +112,9 @@ export class ChunkMesh {
                 case 12: // Diamond
                     gridX = 3; gridY = 1;
                     break;
+                case 13: // Bronze
+                    gridX = 2; gridY = 0;
+                    break;
                 default:
                     gridX = 2; gridY = 0; // Error/Empty
                     break;

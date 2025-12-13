@@ -8,6 +8,7 @@ interface DamageNumber {
     y: number;
     timestamp: number;
     color?: string;
+    lifetime: number; // Duration in milliseconds
 }
 
 interface DamageNumberOverlayProps {
@@ -18,7 +19,14 @@ let damageNumberId = 0;
 const damageNumbers: DamageNumber[] = [];
 
 // Global function to spawn damage numbers
-export function spawnDamageNumber(worldPos: THREE.Vector3, value: number | string, camera: THREE.Camera, container: HTMLElement, color?: string) {
+export function spawnDamageNumber(
+    worldPos: THREE.Vector3,
+    value: number | string,
+    camera: THREE.Camera,
+    container: HTMLElement,
+    color?: string,
+    lifetime: number = 1000 // Default 1 second
+) {
     // Project world position to screen space
     const screenPos = worldPos.clone().project(camera);
 
@@ -32,7 +40,8 @@ export function spawnDamageNumber(worldPos: THREE.Vector3, value: number | strin
         x,
         y,
         timestamp: Date.now(),
-        color
+        color,
+        lifetime
     });
 }
 
@@ -42,8 +51,8 @@ export function DamageNumberOverlay({ camera }: DamageNumberOverlayProps) {
     useEffect(() => {
         const interval = setInterval(() => {
             const now = Date.now();
-            // Remove old damage numbers (after 1 second)
-            const filtered = damageNumbers.filter(n => now - n.timestamp < 1000);
+            // Remove old damage numbers based on their lifetime
+            const filtered = damageNumbers.filter(n => now - n.timestamp < n.lifetime);
             setNumbers([...filtered]);
 
             // Clean up global array
@@ -67,7 +76,7 @@ export function DamageNumberOverlay({ camera }: DamageNumberOverlayProps) {
             zIndex: 100,
         }}>
             {numbers.map((num) => {
-                const age = (Date.now() - num.timestamp) / 1000; // 0 to 1
+                const age = (Date.now() - num.timestamp) / num.lifetime; // 0 to 1 over lifetime
                 const yOffset = age * 50; // Rise up
                 const opacity = Math.max(0, 1 - age);
                 const isText = typeof num.value === 'string';

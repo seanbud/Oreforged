@@ -42,10 +42,11 @@ export const ObjectiveTracker: React.FC<ObjectiveTrackerProps> = ({ currentTool,
     if (currentTool !== ToolTier.HAND && toolHealth <= 0) {
         // Determine Repair Cost
         let repairType = BlockType.Wood;
-        if (currentTool === ToolTier.STONE) repairType = BlockType.Stone;
-        if (currentTool === ToolTier.IRON) repairType = BlockType.Iron;
-        if (currentTool === ToolTier.GOLD) repairType = BlockType.Gold;
-        if (currentTool === ToolTier.DIAMOND) repairType = BlockType.Diamond;
+        if (currentTool === ToolTier.STONE_PICK) repairType = BlockType.Stone;
+        if (currentTool === ToolTier.BRONZE_PICK) repairType = BlockType.Bronze;
+        if (currentTool === ToolTier.IRON_PICK) repairType = BlockType.Iron;
+        if (currentTool === ToolTier.GOLD_PICK) repairType = BlockType.Gold;
+        if (currentTool === ToolTier.DIAMOND_PICK) repairType = BlockType.Diamond;
 
         const cost = 3;
         const current = inventory[repairType] || 0;

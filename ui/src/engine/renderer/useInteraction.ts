@@ -1,7 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 import * as THREE from 'three';
 import { ChunkMesh } from '../../game/ChunkMesh';
-import { BlockType, ToolTier, canMineBlock, getDamage, BLOCK_DEFINITIONS } from '../../game/data/GameDefinitions';
+import { BlockType, ToolTier, canMineBlock, getDamage, BLOCK_DEFINITIONS, CRAFTING_RECIPES } from '../../game/data/GameDefinitions';
 import { OreHealthSystem } from '../../game/systems/OreHealthSystem';
 import { HitParticleSystem } from '../../game/effects/HitParticles';
 import { spawnDamageNumber } from '../../game/effects/DamageNumberOverlay';
@@ -17,6 +17,7 @@ interface InteractionProps {
     damageMultiplier: number;
     onResourceCollected?: (type: BlockType, count: number) => void;
     triggerShake?: (intensity: number) => void;
+    inventory: Record<BlockType, number>;
 }
 
 export function useInteraction({
@@ -29,7 +30,8 @@ export function useInteraction({
     isToolBroken,
     damageMultiplier,
     onResourceCollected,
-    triggerShake
+    triggerShake,
+    inventory
 }: InteractionProps) {
     const outlineBoxRef = useRef<THREE.LineSegments | null>(null);
     const oreHealthRef = useRef<OreHealthSystem | null>(null);
@@ -37,10 +39,10 @@ export function useInteraction({
     const currentMousePosition = useRef<{ x: number, y: number } | null>(null);
 
     // Refs for safe access in event listeners/callbacks
-    const propsRef = useRef({ currentTool, isToolBroken, damageMultiplier, onResourceCollected, triggerShake });
+    const propsRef = useRef({ currentTool, isToolBroken, damageMultiplier, onResourceCollected, triggerShake, inventory });
     useEffect(() => {
-        propsRef.current = { currentTool, isToolBroken, damageMultiplier, onResourceCollected, triggerShake };
-    }, [currentTool, isToolBroken, damageMultiplier, onResourceCollected, triggerShake]);
+        propsRef.current = { currentTool, isToolBroken, damageMultiplier, onResourceCollected, triggerShake, inventory };
+    }, [currentTool, isToolBroken, damageMultiplier, onResourceCollected, triggerShake, inventory]);
 
     // Initialize Helpers
     useEffect(() => {
@@ -196,6 +198,25 @@ export function useInteraction({
 
             if (outlineBoxRef.current) outlineBoxRef.current.visible = false;
             onResourceCollected?.(blockType, 1);
+
+            // Check if this resource is needed for next upgrade and show progress
+            const { currentTool: tool, inventory: inv } = propsRef.current;
+            const nextRecipe = CRAFTING_RECIPES.find(r =>
+                (r.requires === null && tool === ToolTier.HAND) ||
+                r.requires === tool
+            );
+
+            if (nextRecipe && camera) {
+                // Check if the collected resource is needed for this recipe
+                const needed = nextRecipe.cost.get(blockType);
+                if (needed !== undefined && needed > 0) {
+                    // Show progress
+                    const currentCount = (inv[blockType] || 0) + 1; // +1 because we just collected
+                    const progressText = `(${Math.min(currentCount, needed)}/${needed})`;
+                    // Spawn yellow progress indicator with longer lifetime
+                    spawnDamageNumber(worldPos, progressText, camera, containerRef.current, "#FFD700", 2500);
+                }
+            }
         }
 
     }, [getHoveredBlock, scene, camera, containerRef]); // propsRef stable

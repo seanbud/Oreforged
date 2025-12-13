@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Colors, Styles } from '../../../design/tokens';
+import { ToolTier, BlockType, CRAFTING_RECIPES } from '../../data/GameDefinitions';
 
 interface FramedLabelProps {
     label: string;
@@ -65,14 +66,16 @@ interface StatsStripProps {
     energyLevel: number;
     oreLevel: number;
     treeLevel: number;
-    lowResources?: boolean;
+    currentTool: ToolTier;
+    inventory: Record<BlockType, number>;
 }
 
 export const StatsStrip: React.FC<StatsStripProps> = ({
     energyLevel,
     oreLevel,
     treeLevel,
-    lowResources
+    currentTool,
+    inventory
 }) => {
     // Unique Size Labels per Level (Max Level 12)
     const sizeLabels = [
@@ -92,6 +95,30 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
     ];
     let sizeLabel = sizeLabels[Math.min(energyLevel, sizeLabels.length - 1)] || "Unknown";
 
+    // Determine what resource is needed for next upgrade
+    const nextRecipe = CRAFTING_RECIPES.find(r =>
+        (r.requires === null && currentTool === ToolTier.HAND) ||
+        r.requires === currentTool
+    );
+
+    let lowResourceWarning: { name: string; count: number; needed: number } | null = null;
+
+    if (nextRecipe) {
+        // Check each required resource
+        for (const [blockType, needed] of nextRecipe.cost.entries()) {
+            const current = inventory[blockType] || 0;
+            // Show warning if less than 50% of needed amount
+            if (current < needed * 0.5) {
+                lowResourceWarning = {
+                    name: BlockType[blockType],
+                    count: current,
+                    needed: needed
+                };
+                break; // Only show one warning at a time
+            }
+        }
+    }
+
     return (
         <div style={{
             display: 'flex',
@@ -107,12 +134,12 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
                 icon={<div style={{ width: '12px', height: '12px', backgroundColor: '#4CAF50', border: '1px solid #000' }}></div>}
             />
 
-            {/* Warning Label - Conditional */}
-            {lowResources && (
+            {/* Dynamic Resource Warning - Contextual to next upgrade */}
+            {lowResourceWarning && (
                 <FramedLabel
-                    label="Low Wood!"
+                    label={`Low ${lowResourceWarning.name}!`}
                     color="#FF5555"
-                    tooltip={`This map is running low on wood.\nConsider regenerating the world\nto get more trees.`}
+                    tooltip={`You need ${lowResourceWarning.needed} ${lowResourceWarning.name}\nfor your next upgrade.\nYou currently have ${lowResourceWarning.count}.`}
                     icon={<div style={{ fontSize: '12px' }}>⚠️</div>}
                 />
             )}

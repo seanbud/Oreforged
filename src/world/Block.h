@@ -19,6 +19,7 @@ enum class BlockType : uint8_t {
     Iron = 10,
     Gold = 11,
     Diamond = 12,
+    Bronze = 13,
     
     // Add more block types as needed
     Count // Keep this last - represents total number of block types

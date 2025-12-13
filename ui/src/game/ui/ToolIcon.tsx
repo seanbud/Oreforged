@@ -9,13 +9,34 @@ interface ToolIconProps {
 export const ToolIcon: React.FC<ToolIconProps> = ({ tier, size = 48 }) => {
     let headColor = '#fff';
     switch (tier) {
-        case ToolTier.WOOD: headColor = '#8D6E63'; break; // Wood brown
-        case ToolTier.STONE: headColor = '#9E9E9E'; break; // Stone grey
-        case ToolTier.IRON: headColor = '#D7CCC8'; break; // Iron white-ish
-        case ToolTier.GOLD: headColor = '#FFD54F'; break; // Gold yellow
-        case ToolTier.DIAMOND: headColor = '#4DD0E1'; break; // Diamond cyan
-        case ToolTier.HAND: headColor = '#FFAB91'; break; // Light skin tone
+        case ToolTier.WOOD_STICK: headColor = '#8D6E63'; break;
+        case ToolTier.WOOD_PICK: headColor = '#8D6E63'; break;
+        case ToolTier.STONE_PICK: headColor = '#9E9E9E'; break;
+        case ToolTier.FURNACE: headColor = '#424242'; break;
+        case ToolTier.BRONZE_PICK: headColor = '#CD7F32'; break;
+        case ToolTier.IRON_PICK: headColor = '#ECEFF1'; break; // Brighter Iron
+        case ToolTier.GOLD_PICK: headColor = '#FFD54F'; break;
+        case ToolTier.DIAMOND_PICK: headColor = '#4DD0E1'; break;
+        case ToolTier.HAND: headColor = '#FFAB91'; break;
         default: headColor = '#fff';
+    }
+
+    if (tier === ToolTier.FURNACE) {
+        return (
+            <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="10" y="10" width="28" height="28" fill={headColor} stroke="#212121" strokeWidth="4" />
+                <rect x="18" y="24" width="12" height="10" fill="#FF5722" />
+                <rect x="14" y="14" width="20" height="4" fill="#616161" />
+            </svg>
+        );
+    }
+
+    if (tier === ToolTier.WOOD_STICK) {
+        return (
+            <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 36L36 12" stroke={headColor} strokeWidth="6" strokeLinecap="round" />
+            </svg>
+        );
     }
 
     return (

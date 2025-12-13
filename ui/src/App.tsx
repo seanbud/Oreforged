@@ -36,6 +36,7 @@ function App() {
         [BlockType.Iron]: 0,
         [BlockType.Gold]: 0,
         [BlockType.Diamond]: 0,
+        [BlockType.Bronze]: 0,
     });
 
     const [totalMined, setTotalMined] = useState(0);
@@ -67,8 +68,8 @@ function App() {
     const [spentOnCurrentGen, setSpentOnCurrentGen] = useState(0);
     const [autoRandomizeSeed, setAutoRandomizeSeed] = useState(true);
 
-    // New: World Stats for HUD alerts
-    const [worldStats, setWorldStats] = useState({ woodCount: 100 }); // Default high to avoid flash
+    // New: World Stats for HUD alerts (No longer used - removed lowResources)
+    // const [worldStats, setWorldStats] = useState({ woodCount: 100 }); // Default high to avoid flash
     const [shakeTrigger, setShakeTrigger] = useState(0);
 
     // Timer Logic - REMOVED (Unused in HUD)
@@ -81,10 +82,15 @@ function App() {
 
     // Helper functions from Main
     const getModCost = (type: keyof typeof modLevels, level: number) => {
+        let baseCost = 2;
+        if (type === 'tree') baseCost = 2;
+        if (type === 'ore') baseCost = 4;
+        if (type === 'energy') baseCost = 8; // Size
+
         if (type === 'damage') {
             return Math.floor(100 * Math.pow(1.5, level));
         } else {
-            return 2 * Math.pow(2, level);
+            return baseCost * Math.pow(2, level);
         }
     };
 
@@ -109,11 +115,6 @@ function App() {
             ...prev,
             [type]: (prev[type] || 0) + count
         }));
-
-        // Optimistic update for world stats
-        if (type === BlockType.Wood) {
-            setWorldStats(prev => ({ ...prev, woodCount: Math.max(0, prev.woodCount - count) }));
-        }
 
         setTotalMined(prev => {
             const newTotal = prev + count;
@@ -161,10 +162,11 @@ function App() {
         let costType = BlockType.Wood;
         let costAmount = 3;
 
-        if (currentTool === ToolTier.STONE) costType = BlockType.Stone;
-        if (currentTool === ToolTier.IRON) costType = BlockType.Iron;
-        if (currentTool === ToolTier.GOLD) costType = BlockType.Gold;
-        if (currentTool === ToolTier.DIAMOND) costType = BlockType.Diamond;
+        if (currentTool === ToolTier.STONE_PICK) costType = BlockType.Stone;
+        if (currentTool === ToolTier.BRONZE_PICK) costType = BlockType.Bronze;
+        if (currentTool === ToolTier.IRON_PICK) costType = BlockType.Iron;
+        if (currentTool === ToolTier.GOLD_PICK) costType = BlockType.Gold;
+        if (currentTool === ToolTier.DIAMOND_PICK) costType = BlockType.Diamond;
 
         if ((inventory[costType] || 0) >= costAmount) {
             setInventory(prev => ({ ...prev, [costType]: prev[costType] - costAmount }));
@@ -343,8 +345,8 @@ function App() {
                     isToolBroken={isToolBroken}
                     damageMultiplier={damageMultiplier}
                     onResourceCollected={handleResourceCollected}
-                    onWorldUpdate={setWorldStats}
                     externalShakeTrigger={shakeTrigger}
+                    inventory={inventory}
                 />
             </GameLayer>
 
@@ -366,7 +368,8 @@ function App() {
                                     energyLevel={modLevels.energy}
                                     oreLevel={modLevels.ore}
                                     treeLevel={modLevels.tree}
-                                    lowResources={worldStats.woodCount <= 2}
+                                    currentTool={currentTool}
+                                    inventory={inventory}
                                 />
                             )}
                         </div>

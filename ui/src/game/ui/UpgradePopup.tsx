@@ -10,11 +10,14 @@ interface UpgradePopupProps {
 const ToolIcon = ({ tier }: { tier: ToolTier }) => {
     let headColor = '#fff';
     switch (tier) {
-        case ToolTier.WOOD: headColor = '#8D6E63'; break;
-        case ToolTier.STONE: headColor = '#9E9E9E'; break;
-        case ToolTier.IRON: headColor = '#D7CCC8'; break;
-        case ToolTier.GOLD: headColor = '#FFD54F'; break;
-        case ToolTier.DIAMOND: headColor = '#4DD0E1'; break;
+        case ToolTier.WOOD_STICK: headColor = '#8D6E63'; break;
+        case ToolTier.WOOD_PICK: headColor = '#8D6E63'; break;
+        case ToolTier.STONE_PICK: headColor = '#9E9E9E'; break;
+        case ToolTier.FURNACE: headColor = '#424242'; break;
+        case ToolTier.BRONZE_PICK: headColor = '#CD7F32'; break;
+        case ToolTier.IRON_PICK: headColor = '#D7CCC8'; break;
+        case ToolTier.GOLD_PICK: headColor = '#FFD54F'; break;
+        case ToolTier.DIAMOND_PICK: headColor = '#4DD0E1'; break;
         default: headColor = '#fff';
     }
 

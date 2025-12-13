@@ -15,6 +15,7 @@ interface VoxelRendererProps {
     onResourceCollected?: (type: BlockType, count: number) => void;
     onWorldUpdate?: (stats: { woodCount: number }) => void;
     externalShakeTrigger?: number; // Timestamp to trigger shake
+    inventory: Record<BlockType, number>;
 }
 
 export function VoxelRenderer({
@@ -25,7 +26,8 @@ export function VoxelRenderer({
     damageMultiplier = 1.0,
     onResourceCollected,
     onWorldUpdate,
-    externalShakeTrigger
+    externalShakeTrigger,
+    inventory
 }: VoxelRendererProps) {
 
     // 1. Setup Three.js (Scene, Camera, Renderer)
@@ -72,7 +74,8 @@ export function VoxelRenderer({
         isToolBroken,
         damageMultiplier,
         onResourceCollected,
-        triggerShake // Pass the function we got from controls
+        triggerShake, // Pass the function we got from controls
+        inventory
     });
 
     useEffect(() => {

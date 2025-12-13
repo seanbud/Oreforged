@@ -385,7 +385,7 @@ void Chunk::Generate(uint32_t seed, float oreMult, float treeMult, float islandF
 
 void Chunk::GenerateOres(uint32_t seed, float oreMult) {
     // Track counts for guarantees
-    int coalCount = 0, ironCount = 0, goldCount = 0, diamondCount = 0;
+    int coalCount = 0, ironCount = 0, bronzeCount = 0, goldCount = 0, diamondCount = 0;
     
     auto getThresh = [&](float baseFreq) {
         float freq = baseFreq * oreMult;
@@ -401,19 +401,41 @@ void Chunk::GenerateOres(uint32_t seed, float oreMult) {
             
             int worldX = m_chunkX * m_size + x;
             int worldZ = m_chunkZ * m_size + z;
-            
+
             float oreNoise = noise2D(worldX, worldZ, seed + 6000);
             
-            if (oreNoise > getThresh(0.001f)) {        // 0.1% Diamond
+            // Ore Find Scaling: Boost effectiveness exponentially for higher tiers
+            // oreMult starts at 1.0. 
+            // Level 0 (1.0) -> Base rates
+            // Level 10 (~6.0) -> High saturation
+            
+            float effectiveMult = oreMult;
+            
+            // Higher tiers benefit MORE from the multiplier
+            float ironProb = 0.008f * std::pow(effectiveMult, 1.1f);
+            float bronzeProb = 0.016f * std::pow(effectiveMult, 1.0f); 
+            float goldProb = 0.004f * std::pow(effectiveMult, 1.3f);
+            float diamondProb = 0.001f * std::pow(effectiveMult, 1.5f);
+            
+            // Cap at reasonable max (e.g. 10%)
+            ironProb = std::min(0.2f, ironProb);
+            goldProb = std::min(0.1f, goldProb);
+            diamondProb = std::min(0.05f, diamondProb);
+
+            if (oreNoise > (1.0f - diamondProb)) {
                 SetBlock(x, surfaceY + 1, z, BlockType::Diamond);
                 diamondCount++;
-            } else if (oreNoise > getThresh(0.004f)) { // 0.4% Gold
+            } else if (oreNoise > (1.0f - goldProb - diamondProb)) {
                 SetBlock(x, surfaceY + 1, z, BlockType::Gold);
                 goldCount++;
-            } else if (oreNoise > getThresh(0.01f)) {  // 1.0% Iron
+            } else if (oreNoise > (1.0f - ironProb - goldProb - diamondProb)) {
                 SetBlock(x, surfaceY + 1, z, BlockType::Iron);
                 ironCount++;
-            } else if (oreNoise > getThresh(0.02f)) {  // 2.0% Coal (Sprinkling)
+            } else if (oreNoise > (1.0f - bronzeProb - ironProb - goldProb - diamondProb)) {
+                 // Bronze is common base
+                SetBlock(x, surfaceY + 1, z, BlockType::Bronze);
+                bronzeCount++;
+            } else if (oreNoise > getThresh(0.03f)) { // Coal remains common
                  SetBlock(x, surfaceY + 1, z, BlockType::Coal);
                  coalCount++;
             }
@@ -448,7 +470,8 @@ void Chunk::GenerateOres(uint32_t seed, float oreMult) {
     };
     
     if (coalCount < 1) placeOre(BlockType::Coal, 2);
-    if (ironCount < 3) placeOre(BlockType::Iron, 3 - ironCount);
+    if (bronzeCount < 2) placeOre(BlockType::Bronze, 2);
+    if (ironCount < 2) placeOre(BlockType::Iron, 2);
     if (goldCount < 1) placeOre(BlockType::Gold, 1);
     
     // 30% chance for diamond if none generated

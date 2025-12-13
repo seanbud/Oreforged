@@ -102,7 +102,7 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
         }}>
             {/* World Stats Label */}
             <FramedLabel
-                label={`${sizeLabel} Island`}
+                label={`${sizeLabel}`}
                 tooltip={`TREES: (Lvl ${treeLevel})\nORE FIND: (Lvl ${oreLevel})\nSIZE: (Lvl ${energyLevel})`}
                 icon={<div style={{ width: '12px', height: '12px', backgroundColor: '#4CAF50', border: '1px solid #000' }}></div>}
             />
@@ -112,7 +112,7 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
                 <FramedLabel
                     label="Low Wood!"
                     color="#FF5555"
-                    tooltip={`You are running low on wood.\nConsider regenerating the world\nto get more trees.`}
+                    tooltip={`This map is running low on wood.\nConsider regenerating the world\nto get more trees.`}
                     icon={<div style={{ fontSize: '12px' }}>⚠️</div>}
                 />
             )}

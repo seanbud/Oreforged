@@ -25,7 +25,7 @@ const TitleCard: React.FC = () => {
                     fontSize: '12px',
                     color: Colors.Grey.TextDim
                 }}>
-                    Press ESC for Store & Menu
+                    Press ESC for Menu
                 </div>
             </Panel>
 

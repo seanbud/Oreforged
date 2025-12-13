@@ -33,8 +33,8 @@ export function useCameraControls({
 
     // --- State ---
 
-    // The point we are orbiting / panning around
-    const targetPosition = useRef(new THREE.Vector3(0, 0, 0));
+    // The point we are orbiting / panning around - adjusted to center island in view
+    const targetPosition = useRef(new THREE.Vector3(-5, 0, -5));
 
     // Spherical coordinates for Orbiting (Radius, Phi (polar), Theta (equator))
     const spherical = useRef(new THREE.Spherical(56.5, Math.PI / 4, Math.PI / 4));
@@ -374,7 +374,17 @@ export function useCameraControls({
             shakeIntensityRef.current = 0;
         }
 
+
     }, [camera, autoRotate, rotationSpeed]);
 
-    return { update, triggerShake };
+    const resetCamera = useCallback(() => {
+        targetPosition.current.set(-5, 0, -5);
+        spherical.current.set(56.5, Math.PI / 4, Math.PI / 4);
+        desiredTheta.current = Math.PI / 4;
+        desiredPhi.current = Math.PI / 4;
+        velocity.current = { x: 0, z: 0 };
+        velocityHistory.current = [];
+    }, []);
+
+    return { update, triggerShake, resetCamera };
 }

@@ -80,6 +80,7 @@ function App() {
         [BlockType.Diamond]: 100,
     } as Record<BlockType, number>);
     const [shakeTrigger, setShakeTrigger] = useState(0);
+    const [cameraResetTrigger, setCameraResetTrigger] = useState(0);
     const [showCelebrationBurst, setShowCelebrationBurst] = useState(false);
 
     // Timer Logic - REMOVED (Unused in HUD)
@@ -370,6 +371,7 @@ function App() {
                     onResourceCollected={handleResourceCollected}
                     onWorldUpdate={setWorldStats}
                     externalShakeTrigger={shakeTrigger}
+                    cameraResetTrigger={cameraResetTrigger}
                     inventory={inventory}
                 />
             </GameLayer>
@@ -617,6 +619,9 @@ function App() {
                                             setSpentOnCurrentGen(0);
                                             setHasCalibrated(false); // Reset calibration
                                             setRunModifiers([{ damage: 1.0 }]); // Reset damage multiplier
+
+                                            // Reset camera position
+                                            setCameraResetTrigger(Date.now());
 
                                             // Wait for state to update, then regenerate with level 0 params
                                             setTimeout(() => {

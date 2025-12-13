@@ -28,8 +28,8 @@ export function useThreeSetup(): ThreeSetup {
         // 2. Camera
         const aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
         const camera = new THREE.PerspectiveCamera(30, aspect, 0.1, 1000);
-        // Initial Diablo-style isometric-ish position
-        camera.position.set(80, 100, 80);
+        // Initial isometric-ish position
+        camera.position.set(0, 100, 0);
         camera.lookAt(0, 0, 0);
         cameraRef.current = camera;
 

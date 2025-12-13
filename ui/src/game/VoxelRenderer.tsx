@@ -15,6 +15,7 @@ interface VoxelRendererProps {
     onResourceCollected?: (type: BlockType, count: number) => void;
     onWorldUpdate?: (stats: Record<BlockType, number>) => void;
     externalShakeTrigger?: number; // Timestamp to trigger shake
+    cameraResetTrigger?: number; // Timestamp to trigger camera reset
     inventory: Record<BlockType, number>;
 }
 
@@ -27,6 +28,7 @@ export function VoxelRenderer({
     onResourceCollected,
     onWorldUpdate,
     externalShakeTrigger,
+    cameraResetTrigger,
     inventory
 }: VoxelRendererProps) {
 
@@ -40,7 +42,7 @@ export function VoxelRenderer({
     // Create interaction ref for delayed access
     const interactionRef = useRef<{ onTap: (e: MouseEvent) => void, getHoveredBlock: any } | null>(null);
 
-    const { update: updateCamera, triggerShake } = useCameraControls({
+    const { update: updateCamera, triggerShake, resetCamera } = useCameraControls({
         camera,
         renderer,
         autoRotate,
@@ -107,6 +109,13 @@ export function VoxelRenderer({
         }, 2000);
         return () => clearInterval(interval);
     }, [countBlocks, onWorldUpdate]);
+
+    // Camera Reset Trigger
+    useEffect(() => {
+        if (cameraResetTrigger && cameraResetTrigger > 0) {
+            resetCamera();
+        }
+    }, [cameraResetTrigger, resetCamera]);
 
     // 6. Main Animation Loop
     useEffect(() => {

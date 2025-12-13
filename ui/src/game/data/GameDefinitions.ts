@@ -108,13 +108,13 @@ export const CRAFTING_RECIPES: CraftingRecipe[] = [
     },
     {
         result: ToolTier.STONE_PICK,
-        cost: new Map([[BlockType.Stone, 20], [BlockType.Wood, 10]]),
+        cost: new Map([[BlockType.Stone, 10], [BlockType.Wood, 10]]),
         requires: ToolTier.WOOD_PICK,
         displayName: "Stone Pickaxe",
     },
     {
         result: ToolTier.FURNACE,
-        cost: new Map([[BlockType.Stone, 6]]),
+        cost: new Map([[BlockType.Stone, 8], [BlockType.Coal, 12]]),
         requires: ToolTier.STONE_PICK,
         displayName: "Furnace",
     },

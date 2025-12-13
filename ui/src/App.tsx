@@ -68,8 +68,16 @@ function App() {
     const [spentOnCurrentGen, setSpentOnCurrentGen] = useState(0);
     const [autoRandomizeSeed, setAutoRandomizeSeed] = useState(true);
 
-    // New: World Stats for HUD alerts (No longer used - removed lowResources)
-    // const [worldStats, setWorldStats] = useState({ woodCount: 100 }); // Default high to avoid flash
+    // World Stats for contextual warnings
+    const [worldStats, setWorldStats] = useState<Record<BlockType, number>>({
+        [BlockType.Wood]: 100,
+        [BlockType.Stone]: 100,
+        [BlockType.Coal]: 100,
+        [BlockType.Bronze]: 100,
+        [BlockType.Iron]: 100,
+        [BlockType.Gold]: 100,
+        [BlockType.Diamond]: 100,
+    } as Record<BlockType, number>);
     const [shakeTrigger, setShakeTrigger] = useState(0);
 
     // Timer Logic - REMOVED (Unused in HUD)
@@ -345,6 +353,7 @@ function App() {
                     isToolBroken={isToolBroken}
                     damageMultiplier={damageMultiplier}
                     onResourceCollected={handleResourceCollected}
+                    onWorldUpdate={setWorldStats}
                     externalShakeTrigger={shakeTrigger}
                     inventory={inventory}
                 />
@@ -369,7 +378,7 @@ function App() {
                                     oreLevel={modLevels.ore}
                                     treeLevel={modLevels.tree}
                                     currentTool={currentTool}
-                                    inventory={inventory}
+                                    worldResourceCounts={worldStats}
                                 />
                             )}
                         </div>

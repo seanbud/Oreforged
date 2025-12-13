@@ -13,7 +13,7 @@ interface VoxelRendererProps {
     isToolBroken?: boolean;
     damageMultiplier?: number;
     onResourceCollected?: (type: BlockType, count: number) => void;
-    onWorldUpdate?: (stats: { woodCount: number }) => void;
+    onWorldUpdate?: (stats: Record<BlockType, number>) => void;
     externalShakeTrigger?: number; // Timestamp to trigger shake
     inventory: Record<BlockType, number>;
 }
@@ -91,12 +91,19 @@ export function VoxelRenderer({
         }
     }, [externalShakeTrigger, triggerShake]);
 
-    // 5. Polling for World Stats (e.g. Wood Count)
+    // 5. Polling for World Stats (all resources)
     useEffect(() => {
         if (!onWorldUpdate) return;
         const interval = setInterval(() => {
-            const wood = countBlocks(BlockType.Wood);
-            onWorldUpdate({ woodCount: wood });
+            onWorldUpdate({
+                [BlockType.Wood]: countBlocks(BlockType.Wood),
+                [BlockType.Stone]: countBlocks(BlockType.Stone),
+                [BlockType.Coal]: countBlocks(BlockType.Coal),
+                [BlockType.Bronze]: countBlocks(BlockType.Bronze),
+                [BlockType.Iron]: countBlocks(BlockType.Iron),
+                [BlockType.Gold]: countBlocks(BlockType.Gold),
+                [BlockType.Diamond]: countBlocks(BlockType.Diamond),
+            } as Record<BlockType, number>);
         }, 2000);
         return () => clearInterval(interval);
     }, [countBlocks, onWorldUpdate]);

@@ -67,7 +67,7 @@ interface StatsStripProps {
     oreLevel: number;
     treeLevel: number;
     currentTool: ToolTier;
-    inventory: Record<BlockType, number>;
+    worldResourceCounts: Record<BlockType, number>; // World counts, not inventory
 }
 
 export const StatsStrip: React.FC<StatsStripProps> = ({
@@ -75,7 +75,7 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
     oreLevel,
     treeLevel,
     currentTool,
-    inventory
+    worldResourceCounts
 }) => {
     // Unique Size Labels per Level (Max Level 12)
     const sizeLabels = [
@@ -95,28 +95,28 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
     ];
     let sizeLabel = sizeLabels[Math.min(energyLevel, sizeLabels.length - 1)] || "Unknown";
 
-    // Determine what resource is needed for next upgrade
-    const nextRecipe = CRAFTING_RECIPES.find(r =>
-        (r.requires === null && currentTool === ToolTier.HAND) ||
-        r.requires === currentTool
-    );
+    // Find all resources the player has already needed (from completed recipes)
+    const completedRecipes = CRAFTING_RECIPES.filter(r => {
+        if (r.result === ToolTier.HAND) return false;
+        return r.result <= currentTool; // Player has this tool or has progressed past it
+    });
 
-    let lowResourceWarning: { name: string; count: number; needed: number } | null = null;
+    let lowResourceWarning: { name: string; worldCount: number } | null = null;
 
-    if (nextRecipe) {
-        // Check each required resource
-        for (const [blockType, needed] of nextRecipe.cost.entries()) {
-            const current = inventory[blockType] || 0;
-            // Show warning if less than 50% of needed amount
-            if (current < needed * 0.5) {
+    // Check if any resources from completed recipes are depleted in the world
+    for (const recipe of completedRecipes) {
+        for (const [blockType, _needed] of recipe.cost.entries()) {
+            const worldCount = worldResourceCounts[blockType] || 0;
+            // Warning threshold: less than 10 blocks remaining in the world
+            if (worldCount < 10) {
                 lowResourceWarning = {
                     name: BlockType[blockType],
-                    count: current,
-                    needed: needed
+                    worldCount: worldCount
                 };
-                break; // Only show one warning at a time
+                break;
             }
         }
+        if (lowResourceWarning) break;
     }
 
     return (
@@ -134,12 +134,12 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
                 icon={<div style={{ width: '12px', height: '12px', backgroundColor: '#4CAF50', border: '1px solid #000' }}></div>}
             />
 
-            {/* Dynamic Resource Warning - Contextual to next upgrade */}
+            {/* Dynamic Resource Warning - Contextual to world depletion */}
             {lowResourceWarning && (
                 <FramedLabel
                     label={`Low ${lowResourceWarning.name}!`}
                     color="#FF5555"
-                    tooltip={`You need ${lowResourceWarning.needed} ${lowResourceWarning.name}\nfor your next upgrade.\nYou currently have ${lowResourceWarning.count}.`}
+                    tooltip={`This map is running low on ${lowResourceWarning.name}.\nConsider regenerating the world\nto get more resources.`}
                     icon={<div style={{ fontSize: '12px' }}>⚠️</div>}
                 />
             )}

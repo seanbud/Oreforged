@@ -143,20 +143,19 @@ cd ui
 pnpm dev  # Hot reload for UI development
 ```
 
-### Packaging
+## 📦 Building & Packaging
 
-To create a release zip (Windows):
+We follow a "Thick Scripts, Thin CI" philosophy. The `package_release.ps1` script is the single source of truth for building and packaging on Windows.
 
+### Windows
+To create a release zip (builds everything + packages it):
 ```powershell
-# Creates OreForged_Windows.zip in the root directory
-./package_release.ps1
+.\package_release.ps1
 ```
+This is the **exact same script** that runs on GitHub Actions. If it works on your machine, it works in the cloud.
 
-This script will:
-1. Rebuild the entire project
-2. Create a clean `release/` directory
-3. Copy the executable and UI assets
-4. Bundle them into a verified zip file
+### build.bat (Legacy)
+The `build.bat` script is still available for quick development builds but does not handle packaging.
 
 ## Pull Request Process
 

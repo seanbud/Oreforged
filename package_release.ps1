@@ -23,19 +23,19 @@ Pop-Location
 # 2. Setup Release Folder
 $releaseDir = "release"
 if (Test-Path $releaseDir) { Remove-Item $releaseDir -Recurse -Force }
-New-Item -ItemType Directory -Path $releaseDir | Out-Null
+New-Item -ItemType Directory -Path "$releaseDir\OreForged" | Out-Null
 
 # 3. Copy Executable
 Write-Output "  > Copying executable..."
-Copy-Item "build\bin\Release\OreForged.exe" -Destination $releaseDir
+Copy-Item "build\bin\Release\OreForged.exe" -Destination "$releaseDir\OreForged"
 
 # 4. Copy UI
 Write-Output "  > Copying UI resources..."
-Copy-Item "ui\dist" -Destination "$releaseDir\ui" -Recurse
+Copy-Item "ui\dist" -Destination "$releaseDir\OreForged\ui" -Recurse
 
 # 5. Copy WebView2 DLL (if exists)
 if (Test-Path "build\bin\Release\WebView2Loader.dll") {
-    Copy-Item "build\bin\Release\WebView2Loader.dll" -Destination $releaseDir
+    Copy-Item "build\bin\Release\WebView2Loader.dll" -Destination "$releaseDir\OreForged"
 }
 
 # 6. Create Zip (Using tar for better reliability)
@@ -47,8 +47,8 @@ if (Test-Path $zipPath) { Remove-Item $zipPath }
 # -a: Auto-detect compression based on extension (.zip)
 # -c: Create
 # -f: Filename
-# -C: Change directory (so we don't include "release" parent folder)
-tar -a -c -f $zipPath -C $releaseDir .
+# -C: Change directory to release, then zip the OreForged folder
+tar -a -c -f $zipPath -C $releaseDir OreForged
 
 if (-not (Test-Path $zipPath)) { throw "Failed to create zip" }
 Write-Output "Success! Created $zipPath"

@@ -26,32 +26,8 @@ jobs:
       with:
         version: 8
         
-    - name: Build UI
-      run: |
-        cd ui
-        pnpm install
-        pnpm build
-        
-    - name: Configure CMake
-      run: |
-        mkdir build
-        cd build
-        cmake ..
-        
-    - name: Build Game
-      run: |
-        cd build
-        cmake --build . --config Release
-        
-    - name: Package
-      run: |
-        if (Test-Path release) { Remove-Item release -Recurse -Force }
-        mkdir release
-        copy build\bin\Release\OreForged.exe release\
-        if (Test-Path build\bin\Release\WebView2Loader.dll) { copy build\bin\Release\WebView2Loader.dll release\ }
-        xcopy /E /I ui\dist release\ui
-        if (Test-Path OreForged_Windows.zip) { Remove-Item OreForged_Windows.zip }
-        tar -a -c -f OreForged_Windows.zip -C release .
+    - name: Build & Package (Using Local Script)
+      run: .\package_release.ps1
         
     - name: Upload Artifact
       uses: actions/upload-artifact@v4

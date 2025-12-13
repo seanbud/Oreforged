@@ -195,7 +195,7 @@ function App() {
 
     // Regeneration
     const handleRegenerate = () => {
-        const cost = spentOnCurrentGen >= 30 ? 0 : 30;
+        const cost = !hasCalibrated ? 0 : (spentOnCurrentGen >= 30 ? 0 : 30);
         if (isGenerating || totalMined < cost) return;
 
         // Auto-Randomize Seed

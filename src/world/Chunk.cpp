@@ -553,6 +553,21 @@ void Chunk::GenerateTrees(uint32_t seed, float treeMult) {
                 }
             }
         }
+        
+        // CRITICAL: Absolute guarantee - if we still have 0 trees, force place one in center
+        if (treeCount == 0) {
+            int centerX = m_size / 2;
+            int centerZ = m_size / 2;
+            int centerY = FindSurfaceY(centerX, centerZ);
+            
+            // Clear space and force place a tree at center
+            if (centerY >= SEA_LEVEL && centerY + 6 < m_height) {
+                // Ensure grass at surface
+                SetBlock(centerX, centerY, centerZ, BlockType::Grass);
+                PlaceTree(centerX, centerY + 1, centerZ, 3);
+                treeCount = 1;
+            }
+        }
     }
 }
 

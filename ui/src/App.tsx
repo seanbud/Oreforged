@@ -16,6 +16,8 @@ import { Slider } from './oreui/Slider';
 import { ProgressBar } from './oreui/ProgressBar';
 import { StatsStrip } from './game/ui/menu/StatsStrip';
 import VignetteOverlay from './game/ui/VignetteOverlay';
+import { CalibrationSequence } from './game/ui/CalibrationSequence'; // New import
+import { PositiveBurstOverlay } from './game/effects/PositiveBurstOverlay'; // New import
 
 function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -79,6 +81,8 @@ function App() {
         [BlockType.Diamond]: 100,
     } as Record<BlockType, number>);
     const [shakeTrigger, setShakeTrigger] = useState(0);
+    const [showCelebrationBurst, setShowCelebrationBurst] = useState(false);
+    const [calibrationComplete, setCalibrationComplete] = useState(false); // Renamed from hasCalibrated for UI purposes
 
     // Timer Logic - REMOVED (Unused in HUD)
     /*
@@ -115,7 +119,8 @@ function App() {
         }
     };
 
-    const [hasCalibrated, setHasCalibrated] = useState(false);
+    // This state is still used internally for the resource collection logic, not for UI visibility
+    const [hasCalibratedInternal, setHasCalibratedInternal] = useState(false);
 
     // Handle Resources
     const handleResourceCollected = useCallback((type: BlockType, count: number) => {
@@ -126,9 +131,9 @@ function App() {
 
         setTotalMined(prev => {
             const newTotal = prev + count;
-            // Check calibration persistence (Target 16)
-            if (!hasCalibrated && newTotal >= 16) {
-                setHasCalibrated(true);
+            // Check calibration persistence (Target 16) - Internal logic
+            if (!hasCalibratedInternal && newTotal >= 16) {
+                setHasCalibratedInternal(true);
             }
             return newTotal;
         });
@@ -145,7 +150,7 @@ function App() {
                 return newHealth;
             });
         }
-    }, [currentTool, isToolBroken, hasCalibrated]);
+    }, [currentTool, isToolBroken, hasCalibratedInternal]);
 
     // Crafting & Repair Logic
     const handleCraft = (recipe: CraftingRecipe) => {
@@ -346,6 +351,22 @@ function App() {
     return (
         <GameLayout>
             <GameLayer zIndex={0}>
+                {/* Celebration Effect */}
+                <PositiveBurstOverlay isActive={showCelebrationBurst} />
+
+                {/* Calibration Sequence (replaces objective tracker during calibration) */}
+                {!calibrationComplete && (
+                    <CalibrationSequence
+                        currentProgress={totalMined}
+                        targetProgress={16}
+                        onComplete={() => {
+                            setCalibrationComplete(true);
+                            setShowCelebrationBurst(true);
+                            setTimeout(() => setShowCelebrationBurst(false), 1500);
+                        }}
+                    />
+                )}
+
                 <VoxelRenderer
                     autoRotate={autoRotate}
                     rotationSpeed={rotationSpeed}
@@ -371,8 +392,8 @@ function App() {
                     <div style={{ position: 'absolute', top: '20px', left: '20px', pointerEvents: 'auto', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                         <TitleCard />
                         <div style={{ paddingTop: '4px' }}>
-                            {/* Hide Stats Strip until calibrated*/}
-                            {hasCalibrated && (
+                            {/* Stats Strip - Hidden until calibration complete */}
+                            {calibrationComplete && (
                                 <StatsStrip
                                     energyLevel={modLevels.energy}
                                     oreLevel={modLevels.ore}
@@ -411,8 +432,8 @@ function App() {
                     </div>
                 )}
 
-                {/* Top Right - Resources (Using ResourceManifest) */}
-                {!isMenuOpen && <ResourceManifest
+                {/* Top Right - Resources (Using ResourceManifest) - Hidden until calibration complete */}
+                {!isMenuOpen && calibrationComplete && <ResourceManifest
                     inventory={inventory}
                     totalMined={totalMined}
                 />}
@@ -420,17 +441,20 @@ function App() {
                 {/* Bottom Right - Tool Status / Objective Tracker */}
                 {!isMenuOpen && (
                     <>
-                        <div style={{ pointerEvents: 'auto' }}>
-                            <ObjectiveTracker
-                                currentTool={currentTool}
-                                inventory={inventory}
-                                totalMined={totalMined}
-                                toolHealth={toolHealth}
-                                hasCalibrated={hasCalibrated}
-                                onCraft={handleCraft}
-                                onRepair={handleRepair}
-                            />
-                        </div>
+                        {/* Objective Tracker - Only shown after calibration */}
+                        {calibrationComplete && (
+                            <div style={{ pointerEvents: 'auto' }}>
+                                <ObjectiveTracker
+                                    currentTool={currentTool}
+                                    inventory={inventory}
+                                    totalMined={totalMined}
+                                    toolHealth={toolHealth}
+                                    hasCalibrated={hasCalibratedInternal} // Use internal state for logic
+                                    onCraft={handleCraft}
+                                    onRepair={handleRepair}
+                                />
+                            </div>
+                        )}
                         <CurrentToolDisplay
                             currentTool={currentTool}
                             toolHealth={toolHealth}

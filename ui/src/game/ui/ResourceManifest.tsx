@@ -21,6 +21,7 @@ export const ResourceManifest: React.FC<ResourceManifestProps> = ({ inventory, t
             case BlockType.Grass: return "MAT_GRASS";
             case BlockType.Sand: return "MAT_SAND";
             case BlockType.Coal: return "CRE_COAL";
+            case BlockType.Bronze: return "ORE_BRONZE";
             case BlockType.Iron: return "ORE_IRON";
             case BlockType.Gold: return "ORE_GOLD";
             case BlockType.Diamond: return "X_DIAMOND";
@@ -38,6 +39,7 @@ export const ResourceManifest: React.FC<ResourceManifestProps> = ({ inventory, t
             case BlockType.Leaves: return '#2d5a1e';
             case BlockType.Sand: return '#d4c483';
             case BlockType.Coal: return '#2a2a2a';
+            case BlockType.Bronze: return '#CD7F32';
             case BlockType.Iron: return '#9c8c74';
             case BlockType.Diamond: return '#4AEDD9';
             case BlockType.Gold: return '#FFD700';

@@ -107,8 +107,8 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
     for (const recipe of completedRecipes) {
         for (const [blockType, _needed] of recipe.cost.entries()) {
             const worldCount = worldResourceCounts[blockType] || 0;
-            // Warning threshold: less than 10 blocks remaining in the world
-            if (worldCount < 10) {
+            // Warning threshold: less than 30 blocks remaining in the world (increased from 10)
+            if (worldCount < 30) {
                 lowResourceWarning = {
                     name: BlockType[blockType],
                     worldCount: worldCount

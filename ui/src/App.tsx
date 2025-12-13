@@ -494,8 +494,8 @@ function App() {
                             <div style={{ marginBottom: '20px' }}>
                                 <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '5px', fontWeight: 'bold' }}>World Seed</div>
 
-                                {/* Horizontal Seed Row */}
-                                <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                                {/* Horizontal Seed Input Row */}
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                                     <Input
                                         value={seed}
                                         onChange={(e) => setSeed(e.target.value)}
@@ -509,14 +509,14 @@ function App() {
                                     >
                                         ↻
                                     </Button>
-                                    <div style={{ display: 'flex', alignItems: 'center', marginLeft: '10px' }}>
-                                        <Toggle
-                                            label="Auto-Random Seed"
-                                            checked={autoRandomizeSeed}
-                                            onChange={setAutoRandomizeSeed}
-                                        />
-                                    </div>
                                 </div>
+
+                                {/* Toggle on its own line */}
+                                <Toggle
+                                    label="Auto-Random Seed"
+                                    checked={autoRandomizeSeed}
+                                    onChange={setAutoRandomizeSeed}
+                                />
 
                                 <Button
                                     onClick={handleRegenerate}
@@ -599,6 +599,8 @@ function App() {
 
                             {/* Footer Buttons */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <Button onClick={() => setIsMenuOpen(false)} variant="grey">Resume Game</Button>
+                                <Button onClick={() => bridge.quitApplication()} variant="red">Quit Application</Button>
                                 {hasCalibrated && (
                                     <Button
                                         onClick={() => {
@@ -606,13 +608,16 @@ function App() {
                                             setToastMessage('🔄 Upgrades Reset');
                                             setTimeout(() => setToastMessage(''), 3000);
                                         }}
-                                        variant="grey"
+                                        variant="red"
+                                        style={{
+                                            fontSize: '11px',
+                                            padding: '8px 12px',
+                                            opacity: 0.8
+                                        }}
                                     >
                                         Reset Upgrades
                                     </Button>
                                 )}
-                                <Button onClick={() => setIsMenuOpen(false)} variant="grey">Resume Game</Button>
-                                <Button onClick={() => bridge.quitApplication()} variant="red">Quit Application</Button>
                             </div>
                         </Panel>
                     </div >

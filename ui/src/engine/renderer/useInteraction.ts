@@ -187,8 +187,8 @@ export function useInteraction({
 
             // Remove block
             chunkData.blocks[blockIndex] = BlockType.Air;
-            // Rebuild
-            // We need the material... how to access it? 
+            //Rebuild
+            // We need theaterial... how to access it? 
             // ChunkMesh needs material for rebuild.
             // We don't have access to material here easily unless passed.
             // However, ChunkMesh.mesh.material exists!
@@ -198,6 +198,85 @@ export function useInteraction({
 
             if (outlineBoxRef.current) outlineBoxRef.current.visible = false;
             onResourceCollected?.(blockType, 1);
+
+            // SPLASH DAMAGE: Diamond pickaxe (non-broken) deals splash damage to adjacent blocks
+            if (currentTool === ToolTier.DIAMOND_PICK && !isToolBroken) {
+                const splashRadius = 2; // Check blocks within 2 block radius
+
+                // Check all blocks in a sphere around the broken block
+                for (let dx = -splashRadius; dx <= splashRadius; dx++) {
+                    for (let dy = -splashRadius; dy <= splashRadius; dy++) {
+                        for (let dz = -splashRadius; dz <= splashRadius; dz++) {
+                            if (dx === 0 && dy === 0 && dz === 0) continue; // Skip center block (already broken)
+
+                            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                            if (distance > splashRadius) continue; // Outside splash radius
+
+                            const targetX = blockX + dx;
+                            const targetY = blockY + dy;
+                            const targetZ = blockZ + dz;
+
+                            const targetWorldPos = new THREE.Vector3(
+                                worldPos.x + dx,
+                                worldPos.y + dy,
+                                worldPos.z + dz
+                            );
+
+                            // Get block at target position
+                            const targetKey = `${chunkData.chunkX},${chunkData.chunkZ}`;
+                            const targetChunk = chunksRef.current.get(targetKey);
+                            if (!targetChunk) continue;
+
+                            const targetChunkData = targetChunk.chunkData;
+                            if (!targetChunkData) continue;
+
+                            // Check bounds
+                            if (targetX < 0 || targetX >= targetChunkData.size ||
+                                targetY < 0 || targetY >= targetChunkData.height ||
+                                targetZ < 0 || targetZ >= targetChunkData.size) continue;
+
+                            const targetIndex = targetY * targetChunkData.size * targetChunkData.size +
+                                targetZ * targetChunkData.size + targetX;
+                            const targetBlockType = targetChunkData.blocks[targetIndex];
+
+                            if (targetBlockType === BlockType.Air || targetBlockType === BlockType.Bedrock) continue;
+                            if (!canMineBlock(targetBlockType, currentTool)) continue;
+
+                            // Calculate falloff damage (100% at center, decreases with distance)
+                            const falloff = 1.0 - (distance / (splashRadius + 0.5));
+                            const splashDamage = damage * falloff * 0.6; // 60% of main damage with falloff
+
+                            // Apply splash damage
+                            const splashResult = oreHealthRef.current.addDamage(
+                                targetChunkData.chunkX,
+                                targetChunkData.chunkZ,
+                                targetX,
+                                targetY,
+                                targetZ,
+                                targetBlockType,
+                                splashDamage
+                            );
+
+                            // Spawn particles for splash damage
+                            if (particleSystemRef.current && splashDamage > 0) {
+                                const targetBlockDef = BLOCK_DEFINITIONS[targetBlockType as BlockType];
+                                const targetColor = new THREE.Color(targetBlockDef.color);
+                                (particleSystemRef.current as any).spawnHitParticles(targetWorldPos, targetColor);
+                            }
+
+                            // If splash broke the block, remove it
+                            if (splashResult.broke) {
+                                targetChunkData.blocks[targetIndex] = BlockType.Air;
+                                if (targetChunk.mesh && targetChunk.mesh.material) {
+                                    targetChunk.rebuild(scene, targetChunk.mesh.material as THREE.Material, targetChunkData);
+                                }
+                                onResourceCollected?.(targetBlockType, 1);
+                            }
+                        }
+                    }
+                }
+            }
+
 
             // Check if this resource is needed for next upgrade and show progress
             const { currentTool: tool, inventory: inv } = propsRef.current;

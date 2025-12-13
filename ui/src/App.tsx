@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { VoxelRenderer } from './game/VoxelRenderer';
 import { bridge } from './engine/bridge';
 import { Colors, Styles } from './design/tokens';
-import { CraftingRecipe, BlockType, ToolTier, ModLevels, Modifier } from './game/data/GameDefinitions';
+import { CraftingRecipe, BlockType, ToolTier, ModLevels, Modifier, TOOL_DEFINITIONS } from './game/data/GameDefinitions';
 import { GameLayout, GameLayer, HUDLayer } from './layouts/GameLayout';
 import Button from './oreui/Button';
 import Panel from './oreui/Panel';
@@ -170,7 +170,7 @@ function App() {
         });
 
         setCurrentTool(recipe.result);
-        setToolHealth(100);
+        setToolHealth(TOOL_DEFINITIONS[recipe.result].maxHealth);
         setIsToolBroken(false);
         console.log(`Crafted ${recipe.displayName}!`);
     };
@@ -187,7 +187,7 @@ function App() {
 
         if ((inventory[costType] || 0) >= costAmount) {
             setInventory(prev => ({ ...prev, [costType]: prev[costType] - costAmount }));
-            setToolHealth(100);
+            setToolHealth(TOOL_DEFINITIONS[currentTool].maxHealth);
             setIsToolBroken(false);
             console.log("Repaired Tool!");
         }
@@ -608,19 +608,52 @@ function App() {
                                 {hasCalibrated && (
                                     <Button
                                         onClick={() => {
-                                            // Full reset
+                                            // Full reset to pre-calibration state
                                             setModLevels({ tree: 0, ore: 0, energy: 0, damage: 0 });
                                             setInventory({} as Record<BlockType, number>);
                                             setCurrentTool(ToolTier.HAND);
                                             setToolHealth(100);
                                             setTotalMined(0);
                                             setSpentOnCurrentGen(0);
+                                            setHasCalibrated(false); // Reset calibration
+                                            setRunModifiers([{ damage: 1.0 }]); // Reset damage multiplier
 
-                                            // Regenerate world
-                                            handleRegenerate();
+                                            // Wait for state to update, then regenerate with level 0 params
+                                            setTimeout(() => {
+                                                setIsGenerating(true);
+                                                setProgress(0);
 
-                                            setToastMessage('🔄 Full Reset Complete');
-                                            setTimeout(() => setToastMessage(''), 3000);
+                                                const interval = setInterval(() => {
+                                                    setProgress(prev => {
+                                                        if (prev >= 90) {
+                                                            clearInterval(interval);
+                                                            return 90;
+                                                        }
+                                                        return prev + 10;
+                                                    });
+                                                }, 100);
+
+                                                // Generate with level 0 settings
+                                                const seedNum = parseInt(seed) || 12345;
+                                                const nextSize = 16;
+                                                const nextHeight = 32;
+                                                const oreMult = 1.0;
+                                                const treeMult = 1.0;
+                                                const islandFactor = 0.08; // Starting island size
+
+                                                bridge.regenerateWorld(seedNum, nextSize, nextHeight, oreMult, treeMult, islandFactor);
+
+                                                setTimeout(() => {
+                                                    clearInterval(interval);
+                                                    setProgress(100);
+                                                    setTimeout(() => {
+                                                        setIsGenerating(false);
+                                                        setIsMenuOpen(false);
+                                                        setToastMessage('🔄 Full Reset Complete');
+                                                        setTimeout(() => setToastMessage(''), 3000);
+                                                    }, 500);
+                                                }, 1500);
+                                            }, 50);
                                         }}
                                         variant="red"
                                         style={{

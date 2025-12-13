@@ -38,6 +38,7 @@ export interface BlockDefinition {
 
 export interface ToolDefinition {
     damage: number;      // Damage per hit
+    maxHealth: number;   // Maximum durability
     name: string;
     tier: ToolTier;
 }
@@ -80,15 +81,15 @@ export const BLOCK_DEFINITIONS: Record<BlockType, BlockDefinition> = {
 
 // Tool definitions
 export const TOOL_DEFINITIONS: Record<ToolTier, ToolDefinition> = {
-    [ToolTier.HAND]: { damage: 1, name: "Hand", tier: ToolTier.HAND },
-    [ToolTier.WOOD_STICK]: { damage: 2, name: "Wood Stick", tier: ToolTier.WOOD_STICK },
-    [ToolTier.WOOD_PICK]: { damage: 2, name: "Wood Pickaxe", tier: ToolTier.WOOD_PICK },
-    [ToolTier.STONE_PICK]: { damage: 3, name: "Stone Pickaxe", tier: ToolTier.STONE_PICK },
-    [ToolTier.FURNACE]: { damage: 3, name: "Furnace (Installed)", tier: ToolTier.FURNACE }, // No damage boost
-    [ToolTier.BRONZE_PICK]: { damage: 4, name: "Bronze Pickaxe", tier: ToolTier.BRONZE_PICK },
-    [ToolTier.IRON_PICK]: { damage: 5, name: "Iron Pickaxe", tier: ToolTier.IRON_PICK },
-    [ToolTier.GOLD_PICK]: { damage: 8, name: "Gold Pickaxe", tier: ToolTier.GOLD_PICK },
-    [ToolTier.DIAMOND_PICK]: { damage: 12, name: "Diamond Pickaxe", tier: ToolTier.DIAMOND_PICK },
+    [ToolTier.HAND]: { damage: 1, maxHealth: 100, name: "Hand", tier: ToolTier.HAND },
+    [ToolTier.WOOD_STICK]: { damage: 2, maxHealth: 100, name: "Wood Stick", tier: ToolTier.WOOD_STICK },
+    [ToolTier.WOOD_PICK]: { damage: 2, maxHealth: 100, name: "Wood Pickaxe", tier: ToolTier.WOOD_PICK },
+    [ToolTier.STONE_PICK]: { damage: 3, maxHealth: 100, name: "Stone Pickaxe", tier: ToolTier.STONE_PICK },
+    [ToolTier.FURNACE]: { damage: 3, maxHealth: 100, name: "Furnace (Installed)", tier: ToolTier.FURNACE }, // No damage boost
+    [ToolTier.BRONZE_PICK]: { damage: 4, maxHealth: 100, name: "Bronze Pickaxe", tier: ToolTier.BRONZE_PICK },
+    [ToolTier.IRON_PICK]: { damage: 5, maxHealth: 100, name: "Iron Pickaxe", tier: ToolTier.IRON_PICK },
+    [ToolTier.GOLD_PICK]: { damage: 8, maxHealth: 100, name: "Gold Pickaxe", tier: ToolTier.GOLD_PICK },
+    [ToolTier.DIAMOND_PICK]: { damage: 12, maxHealth: 200, name: "Diamond Pickaxe", tier: ToolTier.DIAMOND_PICK },
 };
 
 // Crafting recipes

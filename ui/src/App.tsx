@@ -128,15 +128,7 @@ function App() {
 
         setTotalMined(prev => {
             const newTotal = prev + count;
-            // Check calibration persistence (Target 16)
-            if (!hasCalibrated && newTotal >= 16) {
-                setHasCalibrated(true);
-                // Trigger celebration
-                setShowCelebrationBurst(true);
-                setTimeout(() => setShowCelebrationBurst(false), 1500);
-                setToastMessage('🔨 Crafting Unlocked');
-                setTimeout(() => setToastMessage(''), 3000);
-            }
+            // Calibration now requires manual unlock, no automatic trigger
             return newTotal;
         });
 
@@ -153,6 +145,16 @@ function App() {
             });
         }
     }, [currentTool, isToolBroken, hasCalibrated]);
+
+    // Unlock Crafting - Manual activation
+    const handleUnlockCrafting = () => {
+        setHasCalibrated(true);
+        // Trigger celebration
+        setShowCelebrationBurst(true);
+        setTimeout(() => setShowCelebrationBurst(false), 1500);
+        setToastMessage('🔨 Crafting Unlocked');
+        setTimeout(() => setToastMessage(''), 3000);
+    };
 
     // Crafting & Repair Logic
     const handleCraft = (recipe: CraftingRecipe) => {
@@ -438,6 +440,7 @@ function App() {
                                 hasCalibrated={hasCalibrated}
                                 onCraft={handleCraft}
                                 onRepair={handleRepair}
+                                onUnlockCrafting={handleUnlockCrafting}
                             />
                         </div>
                         <CurrentToolDisplay

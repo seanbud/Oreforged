@@ -11,11 +11,12 @@ interface ObjectiveTrackerProps {
     hasCalibrated: boolean;
     onCraft: (recipe: CraftingRecipe) => void;
     onRepair: () => void;
+    onUnlockCrafting: () => void;
 }
 
-export const ObjectiveTracker: React.FC<ObjectiveTrackerProps> = ({ currentTool, inventory, totalMined, toolHealth, hasCalibrated, onCraft, onRepair }) => {
+export const ObjectiveTracker: React.FC<ObjectiveTrackerProps> = ({ currentTool, inventory, totalMined, toolHealth, hasCalibrated, onCraft, onRepair, onUnlockCrafting }) => {
     // Stage 0: Stealth (If NOT calibrated and low mined)
-    if (!hasCalibrated && totalMined < 6) return null;
+    if (!hasCalibrated && totalMined < 4) return null;
 
     // Stage 1: Calibration (If NOT calibrated)
     const calibrationTarget = 16;
@@ -34,6 +35,46 @@ export const ObjectiveTracker: React.FC<ObjectiveTrackerProps> = ({ currentTool,
                 fontSize: '10px',
             }}>
                 CALIBRATING SENSORS... {totalMined}/{calibrationTarget}
+            </div>
+        );
+    }
+
+    // Stage 1.5: Unlock Crafting Button (When calibrated but not activated)
+    if (!hasCalibrated && totalMined >= calibrationTarget) {
+        return (
+            <div
+                style={{
+                    position: 'absolute',
+                    bottom: '20px',
+                    right: '20px',
+                    fontFamily: Styles.Font.Family,
+                    imageRendering: Styles.Font.Pixelated,
+                    zIndex: 100,
+                    cursor: 'pointer',
+                }}
+                onClick={onUnlockCrafting}
+            >
+                <div style={{
+                    backgroundColor: Colors.Green.Base,
+                    border: `1px solid ${Colors.Green.BorderLight}`,
+                    padding: '12px 20px',
+                    color: Colors.White,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    borderRadius: '4px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                    animation: 'pulse-ready 2s infinite',
+                }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                            🔨 CRAFTING UNLOCKED
+                        </span>
+                        <span style={{ fontSize: '10px', opacity: 0.8 }}>
+                            CLICK TO CONTINUE
+                        </span>
+                    </div>
+                </div>
             </div>
         );
     }

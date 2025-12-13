@@ -134,7 +134,7 @@ function App() {
                 // Trigger celebration
                 setShowCelebrationBurst(true);
                 setTimeout(() => setShowCelebrationBurst(false), 1500);
-                setToastMessage('⚡ ENGINE ONLINE');
+                setToastMessage('🔨 Crafting Unlocked');
                 setTimeout(() => setToastMessage(''), 3000);
             }
             return newTotal;

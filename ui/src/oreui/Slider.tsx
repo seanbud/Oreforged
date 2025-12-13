@@ -11,13 +11,16 @@ interface SliderProps {
 }
 
 export function Slider({ label, min, max, step, value, onChange, disabled }: SliderProps) {
+    // Safety guard
+    const safeValue = value ?? min ?? 0;
+
     // Calculate the percentage for the gradient
-    const percentage = ((value - min) / (max - min)) * 100;
+    const percentage = ((safeValue - min) / (max - min)) * 100;
     const zeroPercentage = ((0 - min) / (max - min)) * 100;
 
     // Determine gradient based on slider position
     let gradient;
-    if (value < 0) {
+    if (safeValue < 0) {
         // Moving left (CCW) - red fill from current position to center
         gradient = `linear-gradient(to right, 
             #555 0%, 
@@ -26,7 +29,7 @@ export function Slider({ label, min, max, step, value, onChange, disabled }: Sli
             #e74c3c ${zeroPercentage}%, 
             #555 ${zeroPercentage}%, 
             #555 100%)`;
-    } else if (value > 0) {
+    } else if (safeValue > 0) {
         // Moving right (CW) - green fill from center to current position
         gradient = `linear-gradient(to right, 
             #555 0%, 
@@ -50,14 +53,14 @@ export function Slider({ label, min, max, step, value, onChange, disabled }: Sli
                 color: '#fff',
                 textShadow: '2px 2px 0px #000'
             }}>
-                {label}: {value.toFixed(1)}x
+                {label}: {safeValue.toFixed(1)}x
             </label>
             <input
                 type="range"
                 min={min}
                 max={max}
                 step={step}
-                value={value}
+                value={safeValue}
                 onChange={onChange}
                 disabled={disabled}
                 style={{

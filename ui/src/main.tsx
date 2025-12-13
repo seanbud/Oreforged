@@ -2,6 +2,9 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 
+// DEBUG: Verify startup
+// window.alert("React Entry Point Loaded");
+
 // Define the C++ binding interface
 declare global {
     interface Window {

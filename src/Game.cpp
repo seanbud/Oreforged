@@ -1,6 +1,7 @@
 #include "Game.h"
 #include "webview.h"
 #include <iostream>
+#include <cmath>
 #ifdef _WIN32
   #include <Windows.h>
 #elif __linux__
@@ -19,6 +20,22 @@ struct WebviewWrapper {
 };
 
 Game::Game() {
+    // Initialize Inventory (Defaults to 0 but explicit for clarity)
+    m_state.inventory[(int)BlockType::Air] = 0;
+    m_state.inventory[(int)BlockType::Grass] = 0;
+    m_state.inventory[(int)BlockType::Dirt] = 0;
+    m_state.inventory[(int)BlockType::Stone] = 0;
+    m_state.inventory[(int)BlockType::Water] = 0;
+    m_state.inventory[(int)BlockType::Wood] = 0;
+    m_state.inventory[(int)BlockType::Leaves] = 0;
+    m_state.inventory[(int)BlockType::Bedrock] = 0;
+    m_state.inventory[(int)BlockType::Sand] = 0;
+    m_state.inventory[(int)BlockType::Coal] = 0;
+    m_state.inventory[(int)BlockType::Iron] = 0;
+    m_state.inventory[(int)BlockType::Gold] = 0;
+    m_state.inventory[(int)BlockType::Diamond] = 0;
+    m_state.inventory[(int)BlockType::Bronze] = 0;
+
     InitUI();
 }
 
@@ -30,12 +47,13 @@ void Game::InitUI() {
     m_webview->w.set_title("OreForged");
     m_webview->w.set_size(1280, 720, WEBVIEW_HINT_NONE);
 
-    // Bind a C++ function to be called from JS
+    // Bind logFromUI
     m_webview->w.bind("logFromUI", [&](std::string seq, std::string req, void* /*arg*/) {
         std::cout << "UI Log: " << req << std::endl;
-        m_webview->w.resolve(seq, 0, "Logged successfully");
+        m_webview->w.resolve(seq, 0, "\"Logged successfully\"");
     }, nullptr);
 
+    // Bind updateState (Legacy/Config)
     m_webview->w.bind("updateState", [&](std::string seq, std::string req, void* /*arg*/) {
         try {
             auto args = json::parse(req);
@@ -43,21 +61,21 @@ void Game::InitUI() {
                 std::string key = args[0];
                 if (key == "renderDistance") {
                     m_state.renderDistance = args[1];
-                    std::cout << "Updated Render Distance: " << m_state.renderDistance << std::endl;
                 }
             }
         } catch (const std::exception& e) {
             std::cerr << "JSON Parse Error: " << e.what() << std::endl;
         }
-        m_webview->w.resolve(seq, 0, "OK");
+        m_webview->w.resolve(seq, 0, "\"OK\"");
     }, nullptr);
 
+    // Bind uiReady
     m_webview->w.bind("uiReady", [&](std::string seq, std::string req, void* /*arg*/) {
         OnUIReady();
-        m_webview->w.resolve(seq, 0, "OK");
+        m_webview->w.resolve(seq, 0, "\"OK\"");
     }, nullptr);
 
-    // Bind quit application
+    // Bind quitApplication
     m_webview->w.bind("quitApplication", [&](std::string seq, std::string req, void* /*arg*/) {
         std::cout << "Quit application requested from UI" << std::endl;
         m_isRunning = false;
@@ -65,81 +83,137 @@ void Game::InitUI() {
         m_webview->w.resolve(seq, 0, R"({"success": true})");
     }, nullptr);
 
-    // Bind world regeneration
-    m_webview->w.bind("regenerateWorld", [&](std::string seq, std::string req, void* /*arg*/) {
-        try {
-            std::cout << "regenerateWorld called with req: " << req << std::endl;
-            
-            // Parse the request - bridge.call sends the args as JSON array
-            auto parsed = nlohmann::json::parse(req);
-            std::cout << "Parsed JSON: " << parsed.dump() << " (type: " << parsed.type_name() << ")" << std::endl;
-            
-            // Handle nested array issue: bridge.call may send ["[333]"] instead of [333]
-            nlohmann::json args;
-            if (parsed.is_array() && !parsed.empty() && parsed[0].is_string()) {
-                std::cout << "First element is string, parsing it: " << parsed[0].dump() << std::endl;
-                args = nlohmann::json::parse(parsed[0].get<std::string>());
-            } else {
-                args = parsed;
-            }
-            
-            std::cout << "Final args: " << args.dump() << std::endl;
-            
-            uint32_t seed = 12345;
-            OreForged::WorldConfig config; // Uses defaults (size=9, height=32)
-            config.size = 9;
-            config.height = 32;
+    // --- GAME LOGIC BINDINGS ---
 
-            if (args.is_array()) {
-                if (args.size() > 0 && args[0].is_number()) seed = args[0].get<uint32_t>();
-                if (args.size() > 1 && args[1].is_number()) config.size = args[1].get<int>();
-                if (args.size() > 2 && args[2].is_number()) config.height = args[2].get<int>();
-                if (args.size() > 3 && args[3].is_number()) config.oreMult = args[3].get<float>();
-                if (args.size() > 4 && args[4].is_number()) config.treeMult = args[4].get<float>();
-                if (args.size() > 5 && args[5].is_number()) config.islandFactor = args[5].get<float>();
+    // interact: ["blockType"]
+    // interact: [blockTypeId (int)]
+    m_webview->w.bind("interact", [&](std::string seq, std::string req, void* /*arg*/) {
+        try {
+            auto parsed = json::parse(req);
+            json args = parsed;
+            // Robust check
+            if (parsed.is_array() && !parsed.empty() && parsed[0].is_string()) {
+                try {
+                    auto inner = json::parse(parsed[0].get<std::string>());
+                    if (inner.is_array()) args = inner;
+                } catch(...) {}
+            }
+
+            if (args.is_array() && args.size() >= 1) {
+                // Now expecting integer ID
+                int blockTypeId = 0;
+                if (args[0].is_number()) blockTypeId = args[0].get<int>();
+                else if (args[0].is_string()) {
+                    // Fallback try parse
+                    try { blockTypeId = std::stoi(args[0].get<std::string>()); } catch(...) {}
+                }
                 
-                std::cout << "Regen Params: Seed=" << seed << " Size=" << config.size 
-                          << " Height=" << config.height << " OreMult=" << config.oreMult 
-                          << " TreeMult=" << config.treeMult << " IslandFactor=" << config.islandFactor << std::endl;
-            } else {
-                std::cout << "Failed to extract args, using default seed: " << seed << std::endl;
+                CollectResource(blockTypeId, 1);
             }
-            
-            std::cout << "Regenerating world..." << std::endl;
-            
-            // Signal UI to clear all chunks first
-            UpdateFacet("clear_chunks", "true");
-            
-            // Small delay to let UI process the clear signal
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            
-            // Regenerate world with config
-            m_state.world.Regenerate(seed, config);
-            
-            // Load 5x5 grid for substantial world feel
-            m_state.world.LoadChunksAroundPosition(0, 0, 2);
-            
-            // Send new chunks to UI with small delays to prevent crash
-            auto chunks = m_state.world.GetLoadedChunks();
-            std::cout << "Sending " << chunks.size() << " regenerated chunks to UI" << std::endl;
-            
-            for (const auto* chunk : chunks) {
-                std::string chunkData = chunk->Serialize();
-                UpdateFacetJSON("chunk_data", chunkData);
-                // Small delay to prevent overwhelming the webview
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            }
-            
-            m_webview->w.resolve(seq, 0, R"({"success": true})");
-        } catch (const std::exception& e) {
-            std::cerr << "Error regenerating world: " << e.what() << std::endl;
-            m_webview->w.resolve(seq, 1, R"({"error": "Regeneration failed"})");
+            m_webview->w.resolve(seq, 0, "\"OK\"");
+        } catch (std::exception& e) {
+            std::cerr << "Interact Error: " << e.what() << std::endl;
+            m_webview->w.resolve(seq, 1, "\"Error\"");
         }
     }, nullptr);
 
-    // Portable executable path finding
-    std::filesystem::path exePath;
+    // craft: [{"recipe_json"}]
+    // craft: [{"recipe_json"}]
+    m_webview->w.bind("craft", [&](std::string seq, std::string req, void* /*arg*/) {
+        try {
+            auto parsed = json::parse(req);
+            json args = parsed;
+            if (parsed.is_array() && !parsed.empty() && parsed[0].is_string()) {
+                 try {
+                    // Try to unwrap if it's double encoded (likely for objects)
+                    auto inner = json::parse(parsed[0].get<std::string>());
+                    // But TryCraft expects the recipe string from args[0]
+                    // If unwrapped is object, we might want to dump it back?
+                    // Actually, let's keep it simple: assume args has the recipe
+                 } catch(...) {}
+            }
 
+            if (args.is_array() && args.size() >= 1) {
+                // If args[0] is still a string, use it. If it's an object, dump it.
+                std::string recipeStr = args[0].is_string() ? args[0].get<std::string>() : args[0].dump();
+                TryCraft(recipeStr);
+            }
+            m_webview->w.resolve(seq, 0, "\"OK\"");
+        } catch (std::exception& e) {
+            std::cerr << "Craft Error: " << e.what() << std::endl;
+            m_webview->w.resolve(seq, 1, "\"Error\"");
+        }
+    }, nullptr);
+
+    // upgrade: ["type"]
+    // upgrade: ["type"]
+    m_webview->w.bind("upgrade", [&](std::string seq, std::string req, void* /*arg*/) {
+        try {
+            auto parsed = json::parse(req);
+            json args = parsed;
+             if (parsed.is_array() && !parsed.empty() && parsed[0].is_string()) {
+                try {
+                    auto inner = json::parse(parsed[0].get<std::string>());
+                    if (inner.is_array()) args = inner;
+                } catch(...) {}
+            }
+
+            if (args.is_array() && args.size() >= 1) {
+                TryBuyUpgrade(args[0].get<std::string>());
+            }
+            m_webview->w.resolve(seq, 0, "\"OK\"");
+        } catch (std::exception& e) {
+            std::cerr << "Upgrade Error: " << e.what() << std::endl;
+            m_webview->w.resolve(seq, 1, "\"Error\"");
+        }
+    }, nullptr);
+
+    // repairTool
+    m_webview->w.bind("repairTool", [&](std::string seq, std::string req, void* /*arg*/) {
+        TryRepair();
+        m_webview->w.resolve(seq, 0, "\"OK\"");
+    }, nullptr);
+
+    // regenerateWorld: [seed, autoRandomize (opt)]
+    m_webview->w.bind("regenerateWorld", [&](std::string seq, std::string req, void* /*arg*/) {
+        try {
+            auto parsed = json::parse(req);
+            json args = parsed;
+             if (parsed.is_array() && !parsed.empty() && parsed[0].is_string()) {
+                try {
+                    auto inner = json::parse(parsed[0].get<std::string>());
+                    if (inner.is_array()) args = inner;
+                } catch(...) {}
+            }
+            
+            std::string seedDecStr = "12345";
+            bool autoRand = true;
+
+            if (args.is_array()) {
+                if (args.size() > 0) {
+                     if (args[0].is_string()) seedDecStr = args[0];
+                     else if (args[0].is_number()) seedDecStr = std::to_string(args[0].get<int>());
+                }
+                if (args.size() > 1 && args[1].is_boolean()) autoRand = args[1].get<bool>();
+            }
+            
+            TryRegenerate(seedDecStr, autoRand);
+            
+            m_webview->w.resolve(seq, 0, "\"OK\"");
+        } catch (const std::exception& e) {
+            std::cerr << "Error regenerating world: " << e.what() << std::endl;
+            m_webview->w.resolve(seq, 1, "\"Error\"");
+        }
+    }, nullptr);
+
+    // Unlock Crafting Cheat / Force
+    m_webview->w.bind("unlockCrafting", [&](std::string seq, std::string req, void* /*arg*/) {
+        UnlockCrafting();
+        m_webview->w.resolve(seq, 0, "\"OK\"");
+    }, nullptr);
+
+    // Portable executable path finding (Load UI)
+    std::filesystem::path exePath;
 #ifdef _WIN32
     char path[MAX_PATH];
     GetModuleFileNameA(NULL, path, MAX_PATH);
@@ -157,8 +231,6 @@ void Game::InitUI() {
 
     auto exeDir = exePath.parent_path();
     auto htmlPath = exeDir / "ui" / "index.html";
-    
-    // Convert to string and replace backslashes with forward slashes for file:// URL
     std::string htmlPathStr = htmlPath.string();
     std::replace(htmlPathStr.begin(), htmlPathStr.end(), '\\', '/');
     m_webview->w.navigate("file:///" + htmlPathStr);
@@ -167,12 +239,9 @@ void Game::InitUI() {
 void Game::Run() {
     m_isRunning = true;
     m_gameLoopThread = std::thread(&Game::GameLoop, this);
-
     if (m_webview) {
         m_webview->w.run();
     }
-
-    // Webview has closed, signal game loop to stop
     m_isRunning = false;
     if (m_gameLoopThread.joinable()) {
         m_gameLoopThread.join();
@@ -180,13 +249,15 @@ void Game::Run() {
 }
 
 void Game::OnUIReady() {
-    std::cout << "UI is ready! Sending initial state..." << std::endl;
+    std::cout << "UI Ready. Syncing State..." << std::endl;
     m_uiReady = true;
 
-    // Send all loaded chunks to UI
+    PushInventory();
+    PushPlayerStats();
+    PushProgression();
+
+    // Send Loaded Chunks
     auto chunks = m_state.world.GetLoadedChunks();
-    std::cout << "Sending " << chunks.size() << " chunks to UI" << std::endl;
-    
     for (const auto* chunk : chunks) {
         std::string chunkData = chunk->Serialize();
         UpdateFacetJSON("chunk_data", chunkData);
@@ -199,7 +270,6 @@ void Game::GameLoop() {
     
     while (m_isRunning) {
         Update();
-        
         next_tick += std::chrono::milliseconds(1000 / 60); // 60 TPS
         std::this_thread::sleep_until(next_tick);
     }
@@ -208,27 +278,340 @@ void Game::GameLoop() {
 void Game::Update() {
     m_state.tickCount++;
     
-    // Generate initial chunks on first tick
+    // Initial Gen
     if (m_state.tickCount == 1) {
-        std::cout << "Generating world chunks..." << std::endl;
-        // Load 5x5 grid around origin
         m_state.world.LoadChunksAroundPosition(0, 0, 2);
-        std::cout << "Generated " << m_state.world.GetLoadedChunks().size() << " chunks" << std::endl;
     }
     
-    // Update tick count to UI every 60 ticks
     if (m_uiReady && m_state.tickCount % 60 == 0) {
         UpdateFacet("tick_count", std::to_string(m_state.tickCount));
     }
 }
 
+// --- LOGIC IMPLEMENTATION ---
+
+// Helper to determine if block is mineable by tool
+bool CanMine(int blockType, ToolTier tool) {
+    if (blockType == (int)BlockType::Bedrock) return false;
+    if (blockType == (int)BlockType::Air) return false;
+    if (blockType == (int)BlockType::Water) return false;
+
+    // Hand can mine basic resources
+    if (tool == ToolTier::HAND) {
+        return blockType == (int)BlockType::Grass || 
+               blockType == (int)BlockType::Dirt || 
+               blockType == (int)BlockType::Wood || 
+               blockType == (int)BlockType::Leaves || 
+               blockType == (int)BlockType::Sand;
+    }
+    
+    // Picks can mine everything Hand can + deeper
+    // Simplified logic: Tiers enable specific blocks
+    // This should match frontend "canMineBlock" if possible
+    
+    // Stone Pick -> Stone, Coal, Iron
+    if (tool == ToolTier::STONE_PICK || tool >= ToolTier::STONE_PICK) {
+        if (blockType == (int)BlockType::Stone || blockType == (int)BlockType::Coal || blockType == (int)BlockType::Iron || blockType == (int)BlockType::Bronze) return true;
+    }
+    
+    // Bronze/Iron -> Gold
+    if (tool >= ToolTier::BRONZE_PICK) {
+        if (blockType == (int)BlockType::Gold) return true;
+    }
+    
+    // Iron -> Diamond
+    if (tool >= ToolTier::IRON_PICK) {
+        if (blockType == (int)BlockType::Diamond) return true;
+    }
+
+    // Always allow basic blocks if tool is better than hand
+    if (blockType == (int)BlockType::Grass || 
+        blockType == (int)BlockType::Dirt || 
+        blockType == (int)BlockType::Wood || 
+        blockType == (int)BlockType::Leaves || 
+        blockType == (int)BlockType::Sand) return true;
+
+    return false;
+}
+
+void Game::CollectResource(int blockTypeId, int count) {
+    // Validation
+    if (!CanMine(blockTypeId, m_state.player.currentTool)) {
+        return;
+    }
+
+    if (blockTypeId > 0) {
+        m_state.inventory[blockTypeId] += count;
+        m_state.progression.totalMined += count;
+        
+        // Tool Damage
+        if (m_state.player.currentTool != ToolTier::HAND && !m_state.player.isToolBroken) {
+            m_state.player.toolHealth = (std::max)(0.0f, m_state.player.toolHealth - 2.0f);
+            if (m_state.player.toolHealth <= 0) {
+                m_state.player.isToolBroken = true;
+            }
+        }
+
+        PushInventory();
+        PushPlayerStats();
+        PushProgression();
+    }
+}
+
+void Game::TryCraft(const std::string& recipeJson) {
+    json recipe;
+    try {
+        recipe = json::parse(recipeJson);
+    } catch (...) {
+        return;
+    }
+
+    // Robust Unwrapping: Handle ["{...}"] or [{"..."}] or plain {...}
+    // Unwrap singleton arrays
+    while (recipe.is_array() && recipe.size() == 1) {
+        if (recipe[0].is_string()) {
+            try {
+                recipe = json::parse(recipe[0].get<std::string>());
+            } catch (...) {
+                break;
+            }
+        } else if (recipe[0].is_object()) {
+            recipe = recipe[0];
+        } else {
+            break;
+        }
+    }
+    
+    std::map<int, int> cost;
+    if (recipe.contains("cost") && recipe["cost"].is_object()) {
+        for (auto& el : recipe["cost"].items()) {
+            try {
+                int id = std::stoi(el.key());
+                cost[id] = el.value();
+            } catch(...) {}
+        }
+    }
+
+    // Check Affordability
+    for (const auto& [item, amount] : cost) {
+        int current = m_state.inventory[item];
+        if (current < amount) {
+            return;
+        }
+    }
+
+    // Check Affordability
+    for (const auto& [item, amount] : cost) {
+        int current = m_state.inventory[item];
+        if (current < amount) {
+            return;
+        }
+    }
+
+    // Deduct
+    for (const auto& [item, amount] : cost) {
+        m_state.inventory[item] -= amount;
+    }
+
+    // Award Tool
+    if (recipe.contains("result")) {
+        int tier = recipe["result"];
+        m_state.player.currentTool = static_cast<ToolTier>(tier);
+        m_state.player.toolHealth = 100.0f; // Reset health
+        m_state.player.isToolBroken = false;
+        
+        // Hardcoded max healths
+        float maxHealth = 100.0f;
+        if (tier == 2) maxHealth = 150.0f;
+        if (tier == 3) maxHealth = 250.0f;
+        if (tier == 4) maxHealth = 500.0f;
+        if (tier == 5) maxHealth = 300.0f;
+        if (tier == 6) maxHealth = 1000.0f;
+        m_state.player.toolHealth = maxHealth;
+    }
+
+    PushInventory();
+    PushPlayerStats();
+}
+
+void Game::TryBuyUpgrade(const std::string& type) {
+    // Calculate Cost Logic
+    long long cost = 0;
+    int currentLevel = 0;
+
+    if (type == "tree") { currentLevel = m_state.progression.treeLevel; cost = 2 * std::pow(2, currentLevel); }
+    else if (type == "ore") { currentLevel = m_state.progression.oreLevel; cost = 4 * std::pow(2, currentLevel); }
+    else if (type == "energy") { currentLevel = m_state.progression.energyLevel; cost = 8 * std::pow(2, currentLevel); }
+    else if (type == "damage") { currentLevel = m_state.progression.damageLevel; cost = std::floor(100 * std::pow(1.5, currentLevel)); }
+
+    if (m_state.progression.totalMined >= cost) {
+        m_state.progression.totalMined -= cost;
+        
+        if (type == "tree") m_state.progression.treeLevel++;
+        else if (type == "ore") m_state.progression.oreLevel++;
+        else if (type == "energy") m_state.progression.energyLevel++;
+        else if (type == "damage") m_state.progression.damageLevel++;
+
+        PushPlayerStats(); // For totalMined update
+        PushProgression();
+    }
+}
+
+void Game::TryRepair() {
+    // Logic matches ObjectiveTracker.tsx
+    // Cost: 3 of relevant material
+    int repairMat = (int)BlockType::Wood;
+    ToolTier current = m_state.player.currentTool;
+    
+    if (current == ToolTier::STONE_PICK) repairMat = (int)BlockType::Stone;
+    else if (current == ToolTier::BRONZE_PICK) repairMat = (int)BlockType::Bronze;
+    else if (current == ToolTier::IRON_PICK) repairMat = (int)BlockType::Iron;
+    else if (current == ToolTier::GOLD_PICK) repairMat = (int)BlockType::Gold;
+    else if (current == ToolTier::DIAMOND_PICK) repairMat = (int)BlockType::Diamond;
+
+    int cost = 3;
+    if (m_state.inventory[repairMat] >= cost) {
+        m_state.inventory[repairMat] -= cost;
+        
+        m_state.player.isToolBroken = false;
+        // Reset health
+         float maxHealth = 100.0f;
+        if (current == ToolTier::STONE_PICK) maxHealth = 150.0f;
+        if (current == ToolTier::BRONZE_PICK) maxHealth = 250.0f;
+        if (current == ToolTier::IRON_PICK) maxHealth = 500.0f;
+        if (current == ToolTier::GOLD_PICK) maxHealth = 300.0f;
+        if (current == ToolTier::DIAMOND_PICK) maxHealth = 1000.0f;
+        m_state.player.toolHealth = maxHealth;
+
+        PushInventory();
+        PushPlayerStats();
+    }
+}
+
+void Game::UnlockCrafting() {
+    UpdateFacet("unlock_crafting", "true");
+}
+
+void Game::TryRegenerate(const std::string& seedStr, bool autoRandomize) {
+    if (m_state.isGenerating) return;
+    
+    // Cost Check: 30 blocks unless free
+    // Simplified logic: If totalMined > 30, deduct 30. (Assuming calibration passed, handled in UI for now? No, strictly backend now)
+    // Actually, preserving the "Free Regen" logic is complex without tracking 'spentOnCurrentGen'.
+    // For this refactor, let's simplify: Regen costs 30 blocks flat unless totalMined < 30 (early game mercy).
+    int cost = 30;
+    if (m_state.progression.totalMined < 30) cost = 0;
+
+    if (m_state.progression.totalMined >= cost) {
+        m_state.progression.totalMined -= cost;
+        PushPlayerStats();
+    } else {
+        return; // Cannot afford
+    }
+
+    m_state.isGenerating = true;
+    UpdateFacet("is_generating", "true");
+    
+    // Thread this to not block UI?
+    // Actually, main thread regen blocks UI in single thread, but m_webview is mostly async.
+    // Let's do it inline for safety but with sleeps like before.
+
+    uint32_t seed = 0;
+    try {
+        seed = std::stoul(seedStr);
+    } catch (...) {
+        seed = 12345;
+    }
+    
+    if (autoRandomize) {
+        seed = rand() % 90000 + 10000;
+        // Notify UI of new seed?
+        UpdateFacet("world_seed", std::to_string(seed));
+    }
+
+    // Config Calculation based on Progression
+    OreForged::WorldConfig config;
+    int energy = m_state.progression.energyLevel;
+    
+    // Size logic
+    config.size = (energy >= 7) ? 16 + (energy - 6) : 16;
+    config.height = 32 + energy * 2;
+    config.oreMult = 1.0f + m_state.progression.oreLevel * 0.5f;
+    config.treeMult = 1.0f + m_state.progression.treeLevel * 0.5f;
+    
+    // Island Factor logic
+    float islandFactor = 1.0f;
+    if (energy <= 6) {
+        float minF = 0.08f;
+        float maxF = 0.55f;
+        float t = energy / 6.0f;
+        islandFactor = minF + (t * t) * (maxF - minF);
+    }
+    config.islandFactor = islandFactor;
+
+    // Cheat Code
+    if (seed == 25565) {
+        m_state.progression.totalMined += 25565;
+        PushPlayerStats();
+    }
+
+    // Execution
+    UpdateFacet("clear_chunks", "true");
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    
+    m_state.world.Regenerate(seed, config);
+    m_state.world.LoadChunksAroundPosition(0, 0, 2);
+    
+    auto chunks = m_state.world.GetLoadedChunks();
+    for (const auto* chunk : chunks) {
+        std::string chunkData = chunk->Serialize();
+        UpdateFacetJSON("chunk_data", chunkData);
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    m_state.isGenerating = false;
+    UpdateFacet("is_generating", "false");
+}
+
+// --- STATE PUSHERS ---
+
+void Game::PushInventory() {
+    json inv = json::object();
+    for (const auto& [id, count] : m_state.inventory) {
+        inv[std::to_string(id)] = count;
+    }
+    UpdateFacetJSON("inventory", inv.dump());
+}
+
+void Game::PushPlayerStats() {
+    json stats = {
+        {"totalMined", m_state.progression.totalMined},
+        {"currentTool", static_cast<int>(m_state.player.currentTool)},
+        {"toolHealth", m_state.player.toolHealth},
+        {"isToolBroken", m_state.player.isToolBroken},
+        {"damageMultiplier", 1.0f + m_state.progression.damageLevel}
+    };
+    UpdateFacetJSON("player_stats", stats.dump());
+}
+
+void Game::PushProgression() {
+    json prog = {
+        {"tree", m_state.progression.treeLevel},
+        {"ore", m_state.progression.oreLevel},
+        {"energy", m_state.progression.energyLevel},
+        {"damage", m_state.progression.damageLevel}
+    };
+    UpdateFacetJSON("progression", prog.dump());
+}
+
+float Game::GetDamageMultiplier() {
+    return 1.0f + m_state.progression.damageLevel;
+}
 
 void Game::UpdateFacet(const std::string& id, const std::string& value) {
     if (!m_webview) return;
-
-    // Dispatch to UI thread
     m_webview->w.dispatch([=]() {
-        if (!m_webview) return; // Safety check
+        if (!m_webview) return;
         std::string script = "if(window.OreForged && window.OreForged.updateFacet) window.OreForged.updateFacet('" + id + "', " + value + ");";
         m_webview->w.eval(script);
     });
@@ -236,11 +619,8 @@ void Game::UpdateFacet(const std::string& id, const std::string& value) {
 
 void Game::UpdateFacetJSON(const std::string& id, const std::string& jsonValue) {
     if (!m_webview) return;
-
-    // Dispatch to UI thread
-    // For JSON, we pass the JSON string directly (it's already valid JavaScript)
     m_webview->w.dispatch([=]() {
-        if (!m_webview) return; // Safety check
+        if (!m_webview) return;
         std::string script = "if(window.OreForged && window.OreForged.updateFacet) window.OreForged.updateFacet('" + id + "', " + jsonValue + ");";
         m_webview->w.eval(script);
     });

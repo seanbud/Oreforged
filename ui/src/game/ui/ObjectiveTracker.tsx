@@ -15,8 +15,8 @@ interface ObjectiveTrackerProps {
 }
 
 export const ObjectiveTracker: React.FC<ObjectiveTrackerProps> = ({ currentTool, inventory, totalMined, toolHealth, hasCalibrated, onCraft, onRepair, onUnlockCrafting }) => {
-    // Stage 0: Stealth (If NOT calibrated and low mined)
-    if (!hasCalibrated && totalMined < 4) return null;
+    // Stage 0: Stealth (Removed to show objectives immediately)
+    // if (!hasCalibrated && totalMined < 4) return null;
 
     // Stage 1: Calibration (If NOT calibrated)
     const calibrationTarget = 16;
@@ -165,7 +165,24 @@ export const ObjectiveTracker: React.FC<ObjectiveTrackerProps> = ({ currentTool,
                 zIndex: 50,
                 cursor: canAfford ? 'pointer' : 'default',
             }}
-            onClick={() => canAfford && onCraft(nextRecipe)}
+            onClick={() => {
+                if (canAfford) {
+                    const payload = {
+                        ...nextRecipe,
+                        cost: Object.fromEntries(nextRecipe.cost)
+                    };
+                    console.log("Crafting Payload:", payload);
+                    onCraft(payload as any);
+                    // Note: onCraft expects CraftingRecipe but we are cheating the type to pass object through bridge.
+                    // Actually, let's fix the onCraft signature or just cast.
+                    // The onCraft prop in ObjectiveTracker is (recipe: CraftingRecipe) => void.
+                    // In GameHUD/App, it calls bridge.call('craft', [JSON.stringify(r)]).
+                    // So we should modify onCraft to accept the serialized object or handle serialization there.
+                    // Better: Handle serialization HERE in the prop callback or inside the component if we own the bridge call.
+                    // In GameHUD.tsx, it passes `onCraft={(r) => bridge.call('craft', [JSON.stringify(r)])}`.
+                    // If we pass the Modified Object as `r`, JSON.stringify works!
+                }
+            }}
         >
             <style>
                 {`

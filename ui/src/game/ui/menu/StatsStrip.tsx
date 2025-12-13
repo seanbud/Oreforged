@@ -95,29 +95,10 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
     ];
     let sizeLabel = sizeLabels[Math.min(energyLevel, sizeLabels.length - 1)] || "Unknown";
 
-    // Find all resources the player has already needed (from completed recipes)
-    const completedRecipes = CRAFTING_RECIPES.filter(r => {
-        if (r.result === ToolTier.HAND) return false;
-        return r.result <= currentTool; // Player has this tool or has progressed past it
-    });
-
-    let lowResourceWarning: { name: string; worldCount: number } | null = null;
-
-    // Check if any resources from completed recipes are depleted in the world
-    for (const recipe of completedRecipes) {
-        for (const [blockType, _needed] of recipe.cost.entries()) {
-            const worldCount = worldResourceCounts[blockType] || 0;
-            // Warning threshold: less than 30 blocks remaining in the world (increased from 10)
-            if (worldCount < 30) {
-                lowResourceWarning = {
-                    name: BlockType[blockType],
-                    worldCount: worldCount
-                };
-                break;
-            }
-        }
-        if (lowResourceWarning) break;
-    }
+    // Simple resource warning: Show if wood is critically low (2 or fewer blocks)
+    const lowResourceWarning = worldResourceCounts[BlockType.Wood] <= 2
+        ? { name: "Wood", worldCount: worldResourceCounts[BlockType.Wood] }
+        : null;
 
     return (
         <div style={{

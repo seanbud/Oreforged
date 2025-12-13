@@ -95,10 +95,29 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
     ];
     let sizeLabel = sizeLabels[Math.min(energyLevel, sizeLabels.length - 1)] || "Unknown";
 
-    // Simple resource warning: Show if wood is critically low (2 or fewer blocks)
-    const lowResourceWarning = worldResourceCounts[BlockType.Wood] <= 2
-        ? { name: "Wood", worldCount: worldResourceCounts[BlockType.Wood] }
-        : null;
+    // Check for critically low resources (2 or fewer blocks)
+    const resourcesToCheck = [
+        BlockType.Wood,
+        BlockType.Stone,
+        BlockType.Coal,
+        BlockType.Bronze,
+        BlockType.Iron,
+        BlockType.Gold,
+        BlockType.Diamond
+    ];
+
+    let lowResourceWarning: { name: string; worldCount: number } | null = null;
+
+    for (const resourceType of resourcesToCheck) {
+        const count = worldResourceCounts[resourceType] || 0;
+        if (count <= 2) {
+            lowResourceWarning = {
+                name: BlockType[resourceType],
+                worldCount: count
+            };
+            break; // Show only one warning at a time
+        }
+    }
 
     return (
         <div style={{

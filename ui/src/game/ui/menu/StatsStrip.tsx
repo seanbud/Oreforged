@@ -97,32 +97,34 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
     ];
     let sizeLabel = sizeLabels[Math.min(energyLevel, sizeLabels.length - 1)] || "Unknown";
 
-    // Determine contextual resources: only warn about resources needed for current upgrade or repair
-    const relevantResources = new Set<BlockType>();
+    // Determine contextual resources: prioritize repair, then upgrade
+    const relevantResources: BlockType[] = [];
 
-    // 1. Add resources needed for next upgrade
-    const nextRecipe = CRAFTING_RECIPES.find(r =>
-        (r.requires === null && currentTool === ToolTier.HAND) ||
-        r.requires === currentTool
-    );
-    if (nextRecipe) {
-        for (const [blockType, _] of nextRecipe.cost.entries()) {
-            relevantResources.add(blockType);
-        }
-    }
-
-    // 2. Add resources needed for current tool repair (if broken)
-    if (currentTool !== ToolTier.HAND && toolHealth <= 0) {
+    // 1. PRIORITY: Add resources needed for current tool repair (if health is low or broken)
+    if (currentTool !== ToolTier.HAND && toolHealth <= 10) {
         let repairType = BlockType.Wood;
         if (currentTool === ToolTier.STONE_PICK) repairType = BlockType.Stone;
         if (currentTool === ToolTier.BRONZE_PICK) repairType = BlockType.Bronze;
         if (currentTool === ToolTier.IRON_PICK) repairType = BlockType.Iron;
         if (currentTool === ToolTier.GOLD_PICK) repairType = BlockType.Gold;
         if (currentTool === ToolTier.DIAMOND_PICK) repairType = BlockType.Diamond;
-        relevantResources.add(repairType);
+        relevantResources.push(repairType);
     }
 
-    // Check for critically low resources (2 or fewer blocks) - only relevant ones
+    // 2. Add resources needed for next upgrade
+    const nextRecipe = CRAFTING_RECIPES.find(r =>
+        (r.requires === null && currentTool === ToolTier.HAND) ||
+        r.requires === currentTool
+    );
+    if (nextRecipe) {
+        for (const [blockType, _] of nextRecipe.cost.entries()) {
+            if (!relevantResources.includes(blockType)) {
+                relevantResources.push(blockType);
+            }
+        }
+    }
+
+    // Check for critically low resources (2 or fewer blocks) - only relevant ones, in priority order
     let lowResourceWarning: { name: string; worldCount: number } | null = null;
 
     for (const resourceType of relevantResources) {

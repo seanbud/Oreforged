@@ -89,7 +89,7 @@ export const TOOL_DEFINITIONS: Record<ToolTier, ToolDefinition> = {
     [ToolTier.BRONZE_PICK]: { damage: 4, maxHealth: 100, name: "Bronze Pickaxe", tier: ToolTier.BRONZE_PICK },
     [ToolTier.IRON_PICK]: { damage: 5, maxHealth: 100, name: "Iron Pickaxe", tier: ToolTier.IRON_PICK },
     [ToolTier.GOLD_PICK]: { damage: 8, maxHealth: 100, name: "Gold Pickaxe", tier: ToolTier.GOLD_PICK },
-    [ToolTier.DIAMOND_PICK]: { damage: 12, maxHealth: 200, name: "Diamond Pickaxe", tier: ToolTier.DIAMOND_PICK },
+    [ToolTier.DIAMOND_PICK]: { damage: 12, maxHealth: 1000, name: "Diamond Pickaxe", tier: ToolTier.DIAMOND_PICK },
 };
 
 // Crafting recipes

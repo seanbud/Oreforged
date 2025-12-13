@@ -524,20 +524,20 @@ function App() {
 
                                 <Button
                                     onClick={handleRegenerate}
-                                    disabled={isGenerating || totalMined < Math.max(0, 30 - spentOnCurrentGen)}
+                                    disabled={isGenerating || (hasCalibrated && totalMined < Math.max(0, 30 - spentOnCurrentGen))}
                                     variant="grey"
                                     style={{
                                         marginTop: '10px',
                                         width: '100%',
-                                        backgroundColor: (Math.max(0, 30 - spentOnCurrentGen) === 0 || totalMined >= Math.max(0, 30 - spentOnCurrentGen)) ? '#4CAF50' : '#555',
+                                        backgroundColor: (!hasCalibrated || Math.max(0, 30 - spentOnCurrentGen) === 0 || totalMined >= Math.max(0, 30 - spentOnCurrentGen)) ? '#4CAF50' : '#555',
                                         color: 'white',
-                                        opacity: (isGenerating || totalMined < Math.max(0, 30 - spentOnCurrentGen)) ? 0.7 : 1,
+                                        opacity: (isGenerating || (hasCalibrated && totalMined < Math.max(0, 30 - spentOnCurrentGen))) ? 0.7 : 1,
                                         border: '2px solid #000',
                                         textShadow: '1px 1px 0px #000',
-                                        boxShadow: (Math.max(0, 30 - spentOnCurrentGen) === 0 || totalMined >= Math.max(0, 30 - spentOnCurrentGen)) ? 'inset -2px -2px 0px rgba(0,0,0,0.5), inset 2px 2px 0px rgba(255,255,255,0.3)' : 'none'
+                                        boxShadow: (!hasCalibrated || Math.max(0, 30 - spentOnCurrentGen) === 0 || totalMined >= Math.max(0, 30 - spentOnCurrentGen)) ? 'inset -2px -2px 0px rgba(0,0,0,0.5), inset 2px 2px 0px rgba(255,255,255,0.3)' : 'none'
                                     }}
                                 >
-                                    {isGenerating ? "Regenerating..." : `Regenerate World (Cost: ${Math.max(0, 30 - spentOnCurrentGen)} Blocks)`}
+                                    {isGenerating ? "Regenerating..." : hasCalibrated ? `Regenerate World (Cost: ${Math.max(0, 30 - spentOnCurrentGen)} Blocks)` : "Regenerate World (Free)"}
                                 </Button>
                             </div>
 

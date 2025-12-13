@@ -67,7 +67,6 @@ interface StatsStripProps {
     oreLevel: number;
     treeLevel: number;
     currentTool: ToolTier;
-    toolHealth: number;
     worldResourceCounts: Record<BlockType, number>; // World counts, not inventory
 }
 
@@ -76,7 +75,6 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
     oreLevel,
     treeLevel,
     currentTool,
-    toolHealth,
     worldResourceCounts
 }) => {
     // Unique Size Labels per Level (Max Level 12)
@@ -97,11 +95,11 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
     ];
     let sizeLabel = sizeLabels[Math.min(energyLevel, sizeLabels.length - 1)] || "Unknown";
 
-    // Determine contextual resources: prioritize repair, then upgrade
+    // Determine contextual resources: show warnings for current tool repair material OR next upgrade
     const relevantResources: BlockType[] = [];
 
-    // 1. PRIORITY: Add resources needed for current tool repair (if health is low or broken)
-    if (currentTool !== ToolTier.HAND && toolHealth <= 10) {
+    // 1. Add repair material for current tool (regardless of health)
+    if (currentTool !== ToolTier.HAND) {
         let repairType = BlockType.Wood;
         if (currentTool === ToolTier.STONE_PICK) repairType = BlockType.Stone;
         if (currentTool === ToolTier.BRONZE_PICK) repairType = BlockType.Bronze;
@@ -124,7 +122,7 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
         }
     }
 
-    // Check for critically low resources (2 or fewer blocks) - only relevant ones, in priority order
+    // Check for critically low resources (2 or fewer blocks) - only relevant ones
     let lowResourceWarning: { name: string; worldCount: number } | null = null;
 
     for (const resourceType of relevantResources) {

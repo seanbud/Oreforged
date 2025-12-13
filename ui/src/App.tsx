@@ -393,7 +393,6 @@ function App() {
                                     oreLevel={modLevels.ore}
                                     treeLevel={modLevels.tree}
                                     currentTool={currentTool}
-                                    toolHealth={toolHealth}
                                     worldResourceCounts={worldStats}
                                 />
                             )}

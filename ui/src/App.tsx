@@ -16,6 +16,7 @@ import { Slider } from './oreui/Slider';
 import { ProgressBar } from './oreui/ProgressBar';
 import { StatsStrip } from './game/ui/menu/StatsStrip';
 import VignetteOverlay from './game/ui/VignetteOverlay';
+import { PositiveBurstOverlay } from './game/effects/PositiveBurstOverlay';
 
 function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -79,6 +80,7 @@ function App() {
         [BlockType.Diamond]: 100,
     } as Record<BlockType, number>);
     const [shakeTrigger, setShakeTrigger] = useState(0);
+    const [showCelebrationBurst, setShowCelebrationBurst] = useState(false);
 
     // Timer Logic - REMOVED (Unused in HUD)
     /*
@@ -129,6 +131,11 @@ function App() {
             // Check calibration persistence (Target 16)
             if (!hasCalibrated && newTotal >= 16) {
                 setHasCalibrated(true);
+                // Trigger celebration
+                setShowCelebrationBurst(true);
+                setTimeout(() => setShowCelebrationBurst(false), 1500);
+                setToastMessage('⚡ ENGINE ONLINE');
+                setTimeout(() => setToastMessage(''), 3000);
             }
             return newTotal;
         });
@@ -346,6 +353,9 @@ function App() {
     return (
         <GameLayout>
             <GameLayer zIndex={0}>
+                {/* Rainbow celebration burst */}
+                <PositiveBurstOverlay isActive={showCelebrationBurst} />
+
                 <VoxelRenderer
                     autoRotate={autoRotate}
                     rotationSpeed={rotationSpeed}

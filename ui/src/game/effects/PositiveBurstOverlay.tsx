@@ -9,6 +9,7 @@ export const PositiveBurstOverlay: React.FC<PositiveBurstOverlayProps> = ({ isAc
 
     return (
         <>
+            {/* Center white burst */}
             <div style={{
                 position: 'fixed',
                 top: 0,
@@ -18,10 +19,10 @@ export const PositiveBurstOverlay: React.FC<PositiveBurstOverlayProps> = ({ isAc
                 pointerEvents: 'none',
                 zIndex: 150,
                 animation: 'positiveBurst 1.5s ease-out forwards',
-                background: 'radial-gradient(circle at center, rgba(76, 175, 80, 0.3) 0%, transparent 70%)',
+                background: 'radial-gradient(circle at center, rgba(255, 255, 255, 0.4) 0%, transparent 70%)',
             }} />
 
-            {/* Corner bursts */}
+            {/* Rainbow corner bursts */}
             <div style={{
                 position: 'fixed',
                 top: 0,
@@ -31,40 +32,44 @@ export const PositiveBurstOverlay: React.FC<PositiveBurstOverlayProps> = ({ isAc
                 pointerEvents: 'none',
                 zIndex: 151,
             }}>
+                {/* Top-left: Red */}
                 <div style={{
                     position: 'absolute',
                     top: '0',
                     left: '0',
                     width: '40%',
                     height: '40%',
-                    background: 'radial-gradient(circle at top left, rgba(255, 215, 0, 0.2) 0%, transparent 60%)',
+                    background: 'radial-gradient(circle at top left, rgba(255, 0, 0, 0.3) 0%, transparent 60%)',
                     animation: 'burstCorner 1s ease-out forwards',
                 }} />
+                {/* Top-right: Yellow */}
                 <div style={{
                     position: 'absolute',
                     top: '0',
                     right: '0',
                     width: '40%',
                     height: '40%',
-                    background: 'radial-gradient(circle at top right, rgba(255, 215, 0, 0.2) 0%, transparent 60%)',
+                    background: 'radial-gradient(circle at top right, rgba(255, 255, 0, 0.3) 0%, transparent 60%)',
                     animation: 'burstCorner 1s ease-out 0.1s forwards',
                 }} />
+                {/* Bottom-left: Cyan */}
                 <div style={{
                     position: 'absolute',
                     bottom: '0',
                     left: '0',
                     width: '40%',
                     height: '40%',
-                    background: 'radial-gradient(circle at bottom left, rgba(64, 164, 223, 0.2) 0%, transparent 60%)',
+                    background: 'radial-gradient(circle at bottom left, rgba(0, 255, 255, 0.3) 0%, transparent 60%)',
                     animation: 'burstCorner 1s ease-out 0.2s forwards',
                 }} />
+                {/* Bottom-right: Magenta */}
                 <div style={{
                     position: 'absolute',
                     bottom: '0',
                     right: '0',
                     width: '40%',
                     height: '40%',
-                    background: 'radial-gradient(circle at bottom right, rgba(64, 164, 223, 0.2) 0%, transparent 60%)',
+                    background: 'radial-gradient(circle at bottom right, rgba(255, 0, 255, 0.3) 0%, transparent 60%)',
                     animation: 'burstCorner 1s ease-out 0.3s forwards',
                 }} />
             </div>

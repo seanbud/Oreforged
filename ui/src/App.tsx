@@ -255,7 +255,10 @@ function App() {
         setTimeout(() => {
             clearInterval(interval);
             setProgress(100);
-            setTimeout(() => setIsGenerating(false), 500);
+            setTimeout(() => {
+                setIsGenerating(false);
+                setIsMenuOpen(false); // Close menu after regeneration
+            }, 500);
         }, 1500);
     };
 

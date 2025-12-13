@@ -509,9 +509,9 @@ function App() {
                                     >
                                         ↻
                                     </Button>
-                                    <div style={{ marginLeft: '10px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', marginLeft: '10px' }}>
                                         <Toggle
-                                            label="Auto Random"
+                                            label="Auto-Random Seed"
                                             checked={autoRandomizeSeed}
                                             onChange={setAutoRandomizeSeed}
                                         />
@@ -537,45 +537,47 @@ function App() {
                                 </Button>
                             </div>
 
-                            {/* Store Section - Matching Main Layout */}
-                            <div style={{
-                                backgroundColor: '#2b2b2b',
-                                border: '2px solid #000',
-                                padding: '10px',
-                                marginBottom: '20px',
-                                position: 'relative'
-                            }}>
+                            {/* Upgrades Section - Only after crafting unlocked */}
+                            {hasCalibrated && (
                                 <div style={{
-                                    fontSize: '10px',
-                                    fontWeight: 'bold',
-                                    paddingBottom: '5px',
-                                    marginBottom: '5px',
-                                    color: '#FFD700',
-                                    textAlign: 'center'
+                                    backgroundColor: '#2b2b2b',
+                                    border: '2px solid #000',
+                                    padding: '10px',
+                                    marginBottom: '20px',
+                                    position: 'relative'
                                 }}>
-                                    Upgrades
-                                </div>
-                                {/* Currency Display in Menu */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '8px',
-                                    right: '8px',
-                                    fontSize: '10px',
-                                    color: (spentOnCurrentGen >= 30 || totalMined >= 30) ? '#FFD700' : '#555',
-                                    fontFamily: 'monospace',
-                                    fontWeight: 'bold'
-                                }}>
-                                    BLOCKS: {totalMined}
-                                </div>
+                                    <div style={{
+                                        fontSize: '10px',
+                                        fontWeight: 'bold',
+                                        paddingBottom: '5px',
+                                        marginBottom: '5px',
+                                        color: '#FFD700',
+                                        textAlign: 'center'
+                                    }}>
+                                        Upgrades
+                                    </div>
+                                    {/* Currency Display in Menu */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '8px',
+                                        right: '8px',
+                                        fontSize: '10px',
+                                        color: (spentOnCurrentGen >= 30 || totalMined >= 30) ? '#FFD700' : '#555',
+                                        fontFamily: 'monospace',
+                                        fontWeight: 'bold'
+                                    }}>
+                                        BLOCKS: {totalMined}
+                                    </div>
 
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    {/* Reordered: Trees -> Ore -> Energy -> Damage */}
-                                    {renderModButton("Trees", "tree", "+Tree Density")}
-                                    {renderModButton("Ore Find", "ore", "+Ore Density")}
-                                    {renderModButton("Size", "energy", "+Size & Height")}
-                                    {renderModButton("DMG", "damage", "+Mining Damage")}
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        {/* Reordered: Trees -> Ore -> Energy -> Damage */}
+                                        {renderModButton("Trees", "tree", "+Tree Density")}
+                                        {renderModButton("Ore Find", "ore", "+Ore Density")}
+                                        {renderModButton("Size", "energy", "+Size & Height")}
+                                        {renderModButton("DMG", "damage", "+Mining Damage")}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
                             <div style={{ borderTop: `2px solid ${Colors.Grey.Dark}`, margin: '20px 0' }}></div>
 
@@ -597,6 +599,18 @@ function App() {
 
                             {/* Footer Buttons */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {hasCalibrated && (
+                                    <Button
+                                        onClick={() => {
+                                            setModLevels({ tree: 0, ore: 0, energy: 0, damage: 0 });
+                                            setToastMessage('🔄 Upgrades Reset');
+                                            setTimeout(() => setToastMessage(''), 3000);
+                                        }}
+                                        variant="grey"
+                                    >
+                                        Reset Upgrades
+                                    </Button>
+                                )}
                                 <Button onClick={() => setIsMenuOpen(false)} variant="grey">Resume Game</Button>
                                 <Button onClick={() => bridge.quitApplication()} variant="red">Quit Application</Button>
                             </div>

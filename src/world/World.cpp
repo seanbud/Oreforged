@@ -82,8 +82,10 @@ void World::Regenerate(uint32_t seed, const WorldConfig& config) {
 }
 
 void World::LoadChunksAroundPosition(int centerChunkX, int centerChunkZ, int radius) {
-    for (int x = centerChunkX - radius; x <= centerChunkX + radius; x++) {
-        for (int z = centerChunkZ - radius; z <= centerChunkZ + radius; z++) {
+    // Asymmetric range to visually center the island (which generates at world 0,0)
+    // Load one extra chunk on the negative side
+    for (int x = centerChunkX - radius - 1; x <= centerChunkX + radius; x++) {
+        for (int z = centerChunkZ - radius - 1; z <= centerChunkZ + radius; z++) {
             GenerateChunk(x, z);
         }
     }

@@ -608,8 +608,18 @@ function App() {
                                 {hasCalibrated && (
                                     <Button
                                         onClick={() => {
+                                            // Full reset
                                             setModLevels({ tree: 0, ore: 0, energy: 0, damage: 0 });
-                                            setToastMessage('🔄 Upgrades Reset');
+                                            setInventory({} as Record<BlockType, number>);
+                                            setCurrentTool(ToolTier.HAND);
+                                            setToolHealth(100);
+                                            setTotalMined(0);
+                                            setSpentOnCurrentGen(0);
+
+                                            // Regenerate world
+                                            handleRegenerate();
+
+                                            setToastMessage('🔄 Full Reset Complete');
                                             setTimeout(() => setToastMessage(''), 3000);
                                         }}
                                         variant="red"

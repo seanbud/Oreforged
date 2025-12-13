@@ -116,6 +116,6 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
                     icon={<div style={{ fontSize: '12px' }}>⚠️</div>}
                 />
             )}
-        </div>
+        </div >
     );
 };

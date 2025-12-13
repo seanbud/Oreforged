@@ -360,12 +360,15 @@ function App() {
                     <div style={{ position: 'absolute', top: '20px', left: '20px', pointerEvents: 'auto', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                         <TitleCard />
                         <div style={{ paddingTop: '4px' }}>
-                            <StatsStrip
-                                energyLevel={modLevels.energy}
-                                oreLevel={modLevels.ore}
-                                treeLevel={modLevels.tree}
-                                lowResources={worldStats.woodCount <= 2}
-                            />
+                            {/* Hide Stats Strip until calibrated*/}
+                            {hasCalibrated && (
+                                <StatsStrip
+                                    energyLevel={modLevels.energy}
+                                    oreLevel={modLevels.ore}
+                                    treeLevel={modLevels.tree}
+                                    lowResources={worldStats.woodCount <= 2}
+                                />
+                            )}
                         </div>
                     </div>
                 )}

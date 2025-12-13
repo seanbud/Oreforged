@@ -5,10 +5,10 @@ const path = require('path');
 const htmlPath = path.join(__dirname, 'dist', 'index.html');
 let html = fs.readFileSync(htmlPath, 'utf-8');
 
-// Find the script tag
-const scriptMatch = html.match(/<script[^>]*src="([^"]+)"[^>]*><\/script>/);
+// Find the script tag (relaxed regex)
+const scriptMatch = html.match(/<script\s+[^>]*src="([^"]+)"[^>]*>\s*<\/script>/);
 if (!scriptMatch) {
-    console.error('No script tag found');
+    console.error('No script tag found. HTML content snippet:', html.substring(0, 500));
     process.exit(1);
 }
 

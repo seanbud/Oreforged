@@ -5,7 +5,7 @@ import Button from '../../../oreui/Button';
 import Toggle from '../../../oreui/Toggle';
 import { Input } from '../../../oreui/Input';
 import { Slider } from '../../../oreui/Slider';
-import { remoteFacet, useFacetState } from '../../../engine/hooks';
+import { useFacetState } from '../../../engine/hooks';
 import { bridge } from '../../../engine/bridge';
 
 interface GameMenuProps {
@@ -17,24 +17,9 @@ interface GameMenuProps {
     onChangeRotationSpeed: (v: number) => void;
 }
 
-// Facets
-const progression = remoteFacet('progression', {
-    tree: 0,
-    ore: 0,
-    energy: 0,
-    damage: 0,
-});
+import { Facets } from '../../data/Facets';
 
-const playerStats = remoteFacet('player_stats', {
-    totalMined: 0,
-    currentTool: 0,
-    toolHealth: 100,
-    isToolBroken: false,
-    damageMultiplier: 1.0,
-});
-
-const seedFacet = remoteFacet('world_seed', "12345");
-const isGeneratingFacet = remoteFacet('is_generating', false);
+// Local Facet definitions removed in favor of singleton Facets
 
 export const GameMenu: React.FC<GameMenuProps> = ({
     isOpen, onClose,
@@ -46,14 +31,16 @@ export const GameMenu: React.FC<GameMenuProps> = ({
     const [autoRand, setAutoRand] = React.useState(true);
 
     // Sync seed from C++
-    const seedVal = useFacetState(seedFacet);
+    const seedVal = useFacetState(Facets.WorldSeed);
+    // Hoist conditional hook to top level
+    const isUnlocked = Boolean(useFacetState(Facets.UnlockCrafting));
+
     React.useEffect(() => setSeedInput(seedVal), [seedVal]);
 
     if (!isOpen) return null;
 
     return (
         <div style={{
-            position: 'absolute',
             top: 0, left: 0, width: '100%', height: '100%',
             backgroundColor: 'rgba(0,0,0,0.7)',
             display: 'flex', justifyContent: 'center', alignItems: 'center',
@@ -75,19 +62,30 @@ export const GameMenu: React.FC<GameMenuProps> = ({
                 {/* World Gen */}
                 <div style={{ marginBottom: '20px' }}>
                     <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '5px', fontWeight: 'bold' }}>World Seed</div>
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                        <Input
-                            value={seedInput}
-                            onChange={(e: any) => {
-                                setSeedInput(e.target.value);
-                                setAutoRand(false); // Disable auto-rand when typing (Fixes Cheatcode)
-                            }}
-                            type="number"
-                            style={{ flex: 1 }}
-                        />
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                        <div style={{ flex: 1 }}>
+                            <Input
+                                value={seedInput}
+                                onChange={(e: any) => {
+                                    setSeedInput(e.target.value);
+                                    setAutoRand(false);
+                                }}
+                                type="number"
+                                style={{ width: '100%' }}
+                            />
+                        </div>
                         <Button
                             onClick={() => setSeedInput(Math.floor(Math.random() * 90000 + 10000).toString())}
-                            style={{ width: '40px', padding: 0 }}
+                            style={{
+                                width: '32px',
+                                height: '32px',
+                                padding: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '18px',
+                                marginLeft: '8px'
+                            }}
                         >↺</Button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -97,8 +95,8 @@ export const GameMenu: React.FC<GameMenuProps> = ({
                         {autoRotate && (
                             <Slider
                                 label="Speed"
-                                min={0.1}
-                                max={2.0}
+                                min={-1.0}
+                                max={1.0}
                                 step={0.1}
                                 value={rotationSpeed}
                                 onChange={(e) => onChangeRotationSpeed(parseFloat(e.target.value))}
@@ -108,9 +106,9 @@ export const GameMenu: React.FC<GameMenuProps> = ({
 
                     <RegenButton seed={seedInput} autoRand={autoRand} />
                 </div>
-
-                {/* Upgrades */}
-                <UpgradeSection />
+                {isUnlocked && (
+                    <UpgradeSection />
+                )}
 
                 <div style={{ borderTop: `2px solid ${Colors.Grey.Dark}`, margin: '20px 0' }}></div>
 
@@ -119,15 +117,32 @@ export const GameMenu: React.FC<GameMenuProps> = ({
                     <Button onClick={onClose} variant="grey">Resume Game</Button>
                     <Button onClick={() => bridge.quitApplication()} variant="red">Quit Application</Button>
                 </div>
-            </Panel>
-        </div>
+
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '15px' }}>
+                    <Button
+                        onClick={() => bridge.call('resetProgression')}
+                        variant="red"
+                        style={{
+                            fontSize: '10px',
+                            padding: '6px 12px',
+                            width: 'auto',
+                            minWidth: '120px'
+                        }}
+                    >
+                        Reset Game (Full Wipe)
+                    </Button>
+                </div>
+            </Panel >
+        </div >
     );
 };
 
 const RegenButton = ({ seed, autoRand }: { seed: string, autoRand: boolean }) => {
-    const generating = useFacetState(isGeneratingFacet);
-    const stats = useFacetState(playerStats);
-    const cost = stats.totalMined >= 30 ? 30 : 0;
+    const generating = useFacetState(Facets.IsGenerating);
+    const stats = useFacetState(Facets.PlayerStats);
+    // Cost is now authoritative from backend (regenCost)
+    // Fallback to 0 if undefined during init
+    const cost = stats.regenCost !== undefined ? stats.regenCost : (stats.totalMined >= 30 ? 30 : 0);
     const canAfford = stats.totalMined >= cost;
 
     return (
@@ -137,22 +152,30 @@ const RegenButton = ({ seed, autoRand }: { seed: string, autoRand: boolean }) =>
             variant="green"
             style={{ marginTop: '10px', width: '100%', opacity: (generating || !canAfford) ? 0.7 : 1 }}
         >
-            {generating ? "Regenerating..." : `Regenerate World (${cost > 0 ? cost + " Blocks" : "Free"})`}
+            {generating ? "Regenerating..." :
+                (stats.totalMined > 0 || stats.currentTool !== 0 ? // If game has started
+                    `Regenerate World (${cost > 0 ? "Cost: " + cost + " Blocks" : "Free"})`
+                    : "Regenerate World (Free)") // Clean slate
+            }
         </Button>
     );
 };
 
 const UpgradeSection = () => {
-    const prog = useFacetState(progression);
-    const stats = useFacetState(playerStats);
+    const prog = useFacetState(Facets.Progression);
+    const stats = useFacetState(Facets.PlayerStats);
 
     return (
         <div style={{
             backgroundColor: '#2b2b2b', border: '2px solid #000', padding: '10px',
             marginBottom: '20px', position: 'relative'
         }}>
-            <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#FFD700', textAlign: 'center', marginBottom: '8px' }}>
-                Upgrades (Blocks: {stats.totalMined})
+            <div style={{
+                fontSize: '14px', fontWeight: 'bold', color: '#FFD700',
+                textAlign: 'center', marginBottom: '12px',
+                textShadow: '2px 2px 0px #000'
+            }}>
+                Available Blocks: <span style={{ color: '#fff' }}>{stats.totalMined}</span>
             </div>
 
             <div style={{ display: 'flex', gap: '8px' }}>

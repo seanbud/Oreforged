@@ -45,6 +45,7 @@ struct ProgressionState {
     int energyLevel = 0;
     int damageLevel = 0;
     long long totalMined = 0;
+    long long spentOnCurrentGen = 0;
 };
 
 struct PlayerState {
@@ -91,6 +92,7 @@ private:
     void TryBuyUpgrade(const std::string& type);
     void TryRegenerate(const std::string& seedStr, bool autoRandomize);
     void UnlockCrafting();
+    void ResetProgression();
 
     // Helpers
     void PushInventory();

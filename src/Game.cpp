@@ -212,6 +212,12 @@ void Game::InitUI() {
         m_webview->w.resolve(seq, 0, "\"OK\"");
     }, nullptr);
 
+    // Reset Progression
+    m_webview->w.bind("resetProgression", [&](std::string seq, std::string req, void* /*arg*/) {
+        ResetProgression();
+        m_webview->w.resolve(seq, 0, "\"OK\"");
+    }, nullptr);
+
     // Portable executable path finding (Load UI)
     std::filesystem::path exePath;
 #ifdef _WIN32
@@ -411,7 +417,22 @@ void Game::TryCraft(const std::string& recipeJson) {
     // Deduct
     for (const auto& [item, amount] : cost) {
         m_state.inventory[item] -= amount;
+        // NOTE: Does spending inventory count towards "Spent on Current Gen"?
+        // Legacy: "spentOnCurrentGen" likely tracked 'mined blocks spent on UPGRADES or REGENS'?
+        // The formula '30 - spent' implies spending reduces the cost to leave.
+        // Yes, investing in the world (crafting, upgrading) reduces the exit fee.
+        // But what defines "spending"?
+        // If I craft a tool, does it count? 
+        // Let's assume ANY inventory deduction counts.
     }
+    
+    // We don't have block values here easily. 
+    // Wait, the legacy app likely tracked 'spent' when buying upgrades.
+    // Did it track crafting?
+    // "setSpentOnCurrentGen(prev => prev + cost)" was likely in UpgradeButton.
+    // If I look at the legacy App.tsx (if I could), I'd verify.
+    // Assuming Upgrades definitely count. Tools? Maybe.
+    // Let's count upgrades for sure.
 
     // Award Tool
     if (recipe.contains("result")) {
@@ -446,6 +467,7 @@ void Game::TryBuyUpgrade(const std::string& type) {
 
     if (m_state.progression.totalMined >= cost) {
         m_state.progression.totalMined -= cost;
+        m_state.progression.spentOnCurrentGen += cost; // Track spending!
         
         if (type == "tree") m_state.progression.treeLevel++;
         else if (type == "ore") m_state.progression.oreLevel++;
@@ -495,12 +517,31 @@ void Game::UnlockCrafting() {
 void Game::TryRegenerate(const std::string& seedStr, bool autoRandomize) {
     if (m_state.isGenerating) return;
     
-    // Cost Check: 30 blocks unless free
-    // Simplified logic: If totalMined > 30, deduct 30. (Assuming calibration passed, handled in UI for now? No, strictly backend now)
-    // Actually, preserving the "Free Regen" logic is complex without tracking 'spentOnCurrentGen'.
-    // For this refactor, let's simplify: Regen costs 30 blocks flat unless totalMined < 30 (early game mercy).
-    int cost = 30;
-    if (m_state.progression.totalMined < 30) cost = 0;
+    // Cost Check: 30 blocks minus whatever was spent this gen.
+    // If not calibrated (no crafting unlocked), it's free.
+    // We check 'unlock_crafting' facet indirectly (we need to track it in backend if possible, or assume totalMined check?)
+    // Actually, let's track 'hasCalibrated' in GameState? 
+    // For now, let's use the legacy logic proxy: if (totalMined < 30) or simply (spent check).
+    
+    // Legacy: Cost = max(0, 30 - spentOnCurrentGen).
+    // If hasCalibrated is false, it's free.
+    
+    // Determine 'hasCalibrated' - simpliest is: do we have tools? or totalMined > X?
+    // Let's rely on standard cost logic mostly, but if totalMined is low, allow free?
+    // User said: "Regen cost on main... exact behavior".
+    // Main behavior: hasCalibrated ? cost : Free.
+    
+    // Since we don't store hasCalibrated in C++ state explicitly (only facet), let's add it or infer.
+    // Inference: If treeLevel > 0 OR currentTool > HAND, we definitely calibrated.
+    bool hasCalibrated = (m_state.progression.treeLevel > 0 || m_state.player.currentTool != ToolTier::HAND || m_state.progression.totalMined > 50);
+
+    long long cost = 0;
+    if (hasCalibrated) {
+        long long deduction = 30;
+        if (m_state.progression.spentOnCurrentGen < deduction) {
+            cost = deduction - m_state.progression.spentOnCurrentGen;
+        }
+    }
 
     if (m_state.progression.totalMined >= cost) {
         m_state.progression.totalMined -= cost;
@@ -512,10 +553,11 @@ void Game::TryRegenerate(const std::string& seedStr, bool autoRandomize) {
     m_state.isGenerating = true;
     UpdateFacet("is_generating", "true");
     
-    // Thread this to not block UI?
-    // Actually, main thread regen blocks UI in single thread, but m_webview is mostly async.
-    // Let's do it inline for safety but with sleeps like before.
+    // Reset "Spent on Current Gen" for the NEW world
+    m_state.progression.spentOnCurrentGen = 0;
 
+    // ... (rest is same)
+    
     uint32_t seed = 0;
     try {
         seed = std::stoul(seedStr);
@@ -573,6 +615,41 @@ void Game::TryRegenerate(const std::string& seedStr, bool autoRandomize) {
     UpdateFacet("is_generating", "false");
 }
 
+void Game::ResetProgression() {
+    // HARD RESET / FULL WIPE
+    m_state.progression.totalMined = 0;
+    m_state.progression.spentOnCurrentGen = 0; // Reset tracking
+    m_state.progression.treeLevel = 0;
+    m_state.progression.oreLevel = 0;
+    m_state.progression.energyLevel = 0;
+    m_state.progression.damageLevel = 0;
+
+    // Reset Inventory
+    for (auto& [key, val] : m_state.inventory) {
+        val = 0;
+    }
+
+    // Reset Player
+    m_state.player.currentTool = ToolTier::HAND;
+    m_state.player.toolHealth = 100.0f;
+    m_state.player.isToolBroken = false;
+
+    // Reset Flags
+    UpdateFacet("unlock_crafting", "false");
+
+    // Push Updates
+    PushInventory();
+    PushPlayerStats();
+    PushProgression();
+
+    // TRIGGER REGENERATION (Auto-Regen on Reset)
+    // Use default seed or random? Legacy used "current input or 12345". 
+    // We'll generate a fresh random seed for a true reset feel, or stick to 12345?
+    // Legacy: `bridge.regenerateWorld(seedNum, ...)` where seedNum was input.
+    // Let's just regen with random.
+    TryRegenerate("12345", true);
+}
+
 // --- STATE PUSHERS ---
 
 void Game::PushInventory() {
@@ -589,8 +666,23 @@ void Game::PushPlayerStats() {
         {"currentTool", static_cast<int>(m_state.player.currentTool)},
         {"toolHealth", m_state.player.toolHealth},
         {"isToolBroken", m_state.player.isToolBroken},
-        {"damageMultiplier", 1.0f + m_state.progression.damageLevel}
+        {"damageMultiplier", 1.0f + m_state.progression.damageLevel},
+        {"regenCost", 0} // Placeholder, need logic here?
+        // Actually, logic is conditional (hasCalibrated). 
+        // Let's calculate it here.
     };
+    
+    // Better: Calculate cost locally
+    bool hasCalibrated = (m_state.progression.treeLevel > 0 || m_state.player.currentTool != ToolTier::HAND || m_state.progression.totalMined > 50);
+    long long cost = 0;
+    if (hasCalibrated) {
+        long long deduction = 30;
+        if (m_state.progression.spentOnCurrentGen < deduction) {
+            cost = deduction - m_state.progression.spentOnCurrentGen;
+        }
+    }
+    stats["regenCost"] = cost;
+
     UpdateFacetJSON("player_stats", stats.dump());
 }
 

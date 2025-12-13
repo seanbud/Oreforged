@@ -103,10 +103,11 @@ export const CurrentToolDisplay: React.FC<CurrentToolDisplayProps> = ({ currentT
                     height: '2px',
                     backgroundColor: '#333',
                     marginTop: '0px',
+                    overflow: 'hidden' // Ensure no overflow
                 }}>
                     <div style={{
                         height: '100%',
-                        width: `${Math.max(0, toolHealth)}%`,
+                        width: `${Math.min(100, Math.max(0, toolHealth))}%`, // Clamp logic
                         backgroundColor: barColor,
                         transition: 'width 0.2s',
                     }} />

@@ -1,60 +1,51 @@
 import React from 'react';
 import { HUDLayer } from '../../layouts/GameLayout';
 import VignetteOverlay from './VignetteOverlay';
+import ScanlineOverlay from './ScanlineOverlay';
 import TitleCard from '../../oreui/TitleCard';
 import { StatsStrip } from './menu/StatsStrip';
 import { ResourceManifest } from './ResourceManifest';
 import { ObjectiveTracker } from './ObjectiveTracker';
 import { CurrentToolDisplay } from './CurrentToolDisplay';
-import { remoteFacet, useFacetState } from '../../engine/hooks';
+import { useFacetState } from '../../engine/hooks';
 import { bridge } from '../../engine/bridge';
 import { BlockType, ToolTier } from '../data/GameDefinitions';
-
-// Facets
-const playerStats = remoteFacet('player_stats', {
-    totalMined: 0,
-    currentTool: 0,
-    toolHealth: 100,
-    isToolBroken: false,
-    damageMultiplier: 1.0,
-});
-
-const progression = remoteFacet('progression', {
-    tree: 0,
-    ore: 0,
-    energy: 0,
-    damage: 0
-});
-
-const inventoryFacet = remoteFacet('inventory', {} as Record<BlockType, number>);
-// Note: We need a way to detect "has calibrated". 
-// In C++, we don't have a specific flag, but we can infer it or add it.
-// For now, let's assume if totalMined > 0 or tool > HAND, we have started. 
-// Or add 'unlock_crafting' facet.
-const unlockCraftingFacet = remoteFacet('unlock_crafting', false);
-
-// World Stats for now still local or needs backend support?
-// The backend didn't implement 'worldStats' (resource counts in world). 
-// Let's keep `worldStats` as passed props from VoxelRenderer for now since that comes from chunk scanning?
-// Wait, VoxelRenderer computes it.
-import { VoxelRenderer } from '../VoxelRenderer';
+import { Facets } from '../data/Facets';
 
 interface GameHUDProps {
     isMenuOpen: boolean;
     worldStats: Partial<Record<BlockType, number>>; // Passed from Renderer
 }
 
+import { PositiveBurstOverlay } from './PositiveBurstOverlay';
+// ... imports
+
 export const GameHUD: React.FC<GameHUDProps> = ({ isMenuOpen, worldStats }) => {
-    const stats = useFacetState(playerStats);
-    const ups = useFacetState(progression);
-    const inv = useFacetState(inventoryFacet);
-    // Explicitly cast to boolean as sometimes it might be string "true" depending on backend push (though we handled it)
-    const hasCalibrated = Boolean(useFacetState(unlockCraftingFacet));
+    const stats = useFacetState(Facets.PlayerStats);
+    const ups = useFacetState(Facets.Progression);
+    const inv = useFacetState(Facets.Inventory);
+    const hasCalibrated = Boolean(useFacetState(Facets.UnlockCrafting));
 
     const currentTool = stats.currentTool as ToolTier;
 
+    // Celebration Logic
+    const [showBurst, setShowBurst] = React.useState(false);
+    const prevCalibrated = React.useRef(hasCalibrated);
+
+    React.useEffect(() => {
+        // Only trigger on rising edge (false -> true)
+        if (!prevCalibrated.current && hasCalibrated) {
+            setShowBurst(true);
+            const timer = setTimeout(() => setShowBurst(false), 1500);
+            return () => clearTimeout(timer);
+        }
+        prevCalibrated.current = hasCalibrated;
+    }, [hasCalibrated]);
+
     return (
         <HUDLayer>
+            <PositiveBurstOverlay isActive={showBurst} />
+            <ScanlineOverlay />
             <VignetteOverlay healthRatio={stats.toolHealth / 100} isBroken={stats.isToolBroken} />
 
             {!isMenuOpen && (
@@ -63,8 +54,8 @@ export const GameHUD: React.FC<GameHUDProps> = ({ isMenuOpen, worldStats }) => {
                     <div style={{ position: 'absolute', top: '20px', left: '20px', pointerEvents: 'auto', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                         <TitleCard />
                         <div style={{ paddingTop: '4px' }}>
-                            {/* We show StatsStrip only if calibrated or significant progress */}
-                            {(hasCalibrated || stats.totalMined > 10) && (
+                            {/* Stats Strip - Only show if calibrated */}
+                            {hasCalibrated && (
                                 <StatsStrip
                                     energyLevel={ups.energy}
                                     oreLevel={ups.ore}
@@ -76,8 +67,10 @@ export const GameHUD: React.FC<GameHUDProps> = ({ isMenuOpen, worldStats }) => {
                         </div>
                     </div>
 
-                    {/* Top Right */}
-                    <ResourceManifest inventory={inv} totalMined={stats.totalMined} />
+                    {/* Top Right - Only show if calibrated */}
+                    {hasCalibrated && (
+                        <ResourceManifest inventory={inv} totalMined={stats.totalMined} />
+                    )}
 
                     {/* Bottom Right */}
                     <div style={{ pointerEvents: 'auto' }}>

@@ -5,19 +5,14 @@ import { GameLayout, GameLayer, HUDLayer } from './layouts/GameLayout';
 import { GameMenu } from './game/ui/menu/GameMenu';
 import { GameHUD } from './game/ui/GameHUD';
 import { RegenOverlay } from './game/ui/RegenOverlay';
-import { remoteFacet, useFacetState } from './engine/hooks';
+import { useFacetState } from './engine/hooks';
 import { BlockType, ToolTier } from './game/data/GameDefinitions';
 
-// Facets
-const playerStats = remoteFacet('player_stats', {
-    totalMined: 0,
-    currentTool: 0,
-    toolHealth: 100,
-    isToolBroken: false,
-    damageMultiplier: 1.0,
-});
+import { Facets } from './game/data/Facets';
 
-const inventoryFacet = remoteFacet('inventory', {} as Record<BlockType, number>);
+import { ErrorBoundary } from './engine/ErrorBoundary';
+
+// Facets (Removed local definitions)
 
 function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -27,8 +22,8 @@ function App() {
     const [rotationSpeed, setRotationSpeed] = useState(0.5);
 
     // Unwrapped State for VoxelRenderer
-    const stats = useFacetState(playerStats);
-    const inventory = useFacetState(inventoryFacet);
+    const stats = useFacetState(Facets.PlayerStats);
+    const inventory = useFacetState(Facets.Inventory);
     const [worldStats, setWorldStats] = useState<Partial<Record<BlockType, number>>>({});
 
     // Handle inputs
@@ -50,36 +45,38 @@ function App() {
     const currentTool = stats.currentTool as ToolTier;
 
     return (
-        <GameLayout>
-            <GameLayer zIndex={0}>
-                {/* Visuals */}
-                <VoxelRenderer
-                    autoRotate={autoRotate}
-                    rotationSpeed={rotationSpeed}
-                    currentTool={currentTool}
-                    isToolBroken={stats.isToolBroken}
-                    damageMultiplier={stats.damageMultiplier}
-                    onResourceCollected={(type, count) => bridge.call('interact', [type, count])}
-                    onWorldUpdate={setWorldStats}
-                    externalShakeTrigger={stats.isToolBroken ? Date.now() : 0} // Simple trigger
-                    cameraResetTrigger={0}
-                    inventory={inventory}
-                />
-            </GameLayer>
+        <ErrorBoundary>
+            <GameLayout>
+                <GameLayer zIndex={0}>
+                    {/* Visuals */}
+                    <VoxelRenderer
+                        autoRotate={autoRotate}
+                        rotationSpeed={rotationSpeed}
+                        currentTool={currentTool}
+                        isToolBroken={stats.isToolBroken}
+                        damageMultiplier={stats.damageMultiplier}
+                        onResourceCollected={(type, count) => bridge.call('interact', [type, count])}
+                        onWorldUpdate={setWorldStats}
+                        externalShakeTrigger={stats.isToolBroken ? Date.now() : 0} // Simple trigger
+                        cameraResetTrigger={0}
+                        inventory={inventory}
+                    />
+                </GameLayer>
 
-            <HUDLayer>
-                <GameHUD isMenuOpen={isMenuOpen} worldStats={worldStats} />
-                <RegenOverlay />
-                <GameMenu
-                    isOpen={isMenuOpen}
-                    onClose={() => setIsMenuOpen(false)}
-                    autoRotate={autoRotate}
-                    onToggleAutoRotate={setAutoRotate}
-                    rotationSpeed={rotationSpeed}
-                    onChangeRotationSpeed={setRotationSpeed}
-                />
-            </HUDLayer>
-        </GameLayout>
+                <HUDLayer>
+                    <GameHUD isMenuOpen={isMenuOpen} worldStats={worldStats} />
+                    <RegenOverlay />
+                    <GameMenu
+                        isOpen={isMenuOpen}
+                        onClose={() => setIsMenuOpen(false)}
+                        autoRotate={autoRotate}
+                        onToggleAutoRotate={setAutoRotate}
+                        rotationSpeed={rotationSpeed}
+                        onChangeRotationSpeed={setRotationSpeed}
+                    />
+                </HUDLayer>
+            </GameLayout>
+        </ErrorBoundary>
     );
 }
 

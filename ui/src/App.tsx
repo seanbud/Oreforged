@@ -387,7 +387,6 @@ function App() {
                                     energyLevel={modLevels.energy}
                                     oreLevel={modLevels.ore}
                                     treeLevel={modLevels.tree}
-                                    currentTool={currentTool}
                                     worldResourceCounts={worldStats}
                                 />
                             )}

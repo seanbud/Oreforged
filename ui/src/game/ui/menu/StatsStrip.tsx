@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Colors, Styles } from '../../../design/tokens';
-import { ToolTier, BlockType, CRAFTING_RECIPES } from '../../data/GameDefinitions';
+import { BlockType } from '../../data/GameDefinitions';
 
 interface FramedLabelProps {
     label: string;
@@ -66,7 +66,6 @@ interface StatsStripProps {
     energyLevel: number;
     oreLevel: number;
     treeLevel: number;
-    currentTool: ToolTier;
     worldResourceCounts: Record<BlockType, number>; // World counts, not inventory
 }
 
@@ -74,7 +73,6 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
     energyLevel,
     oreLevel,
     treeLevel,
-    currentTool,
     worldResourceCounts
 }) => {
     // Unique Size Labels per Level (Max Level 12)

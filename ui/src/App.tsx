@@ -607,28 +607,49 @@ function App() {
                 {toastMessage && (
                     <div style={{
                         position: 'fixed',
-                        top: '20px',
+                        top: '80px',
                         left: '50%',
                         transform: 'translateX(-50%)',
-                        background: Colors.Green.Base,
+                        background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.95) 0%, rgba(20, 20, 20, 0.98) 100%)',
+                        backdropFilter: 'blur(10px)',
                         color: Colors.White,
-                        padding: '12px 20px',
-                        border: `${Styles.Border.Width} ${Styles.Border.Style} ${Colors.Green.BorderLight}`,
-                        borderBottom: `${Styles.Border.Width} ${Styles.Border.Style} ${Colors.Green.BorderDark}`,
-                        borderRight: `${Styles.Border.Width} ${Styles.Border.Style} ${Colors.Green.BorderDark}`,
-                        boxShadow: Styles.Shadows.Bevel(Colors.Green.BorderLight, Colors.Green.BorderDark),
-                        fontSize: '14px',
-                        fontWeight: 'bold',
+                        padding: '16px 32px',
+                        borderRadius: '12px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+                        fontSize: '16px',
+                        fontWeight: '600',
                         fontFamily: Styles.Font.Family,
-                        textShadow: Styles.Shadows.Text(Colors.Black),
-                        imageRendering: Styles.Font.Pixelated,
+                        textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)',
                         zIndex: 10000,
-                        animation: 'slideDown 0.3s ease-out',
-                        pointerEvents: 'none'
+                        animation: 'toastSlideInFade 3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        pointerEvents: 'none',
+                        letterSpacing: '0.5px'
                     }}>
                         {toastMessage}
                     </div>
                 )}
+
+                <style>{`
+                    @keyframes toastSlideInFade {
+                        0% {
+                            opacity: 0;
+                            transform: translateX(-50%) translateY(-20px);
+                        }
+                        10% {
+                            opacity: 1;
+                            transform: translateX(-50%) translateY(0);
+                        }
+                        85% {
+                            opacity: 1;
+                            transform: translateX(-50%) translateY(0);
+                        }
+                        100% {
+                            opacity: 0;
+                            transform: translateX(-50%) translateY(-10px);
+                        }
+                    }
+                `}</style>
             </HUDLayer >
         </GameLayout >
     );

@@ -18,10 +18,12 @@ export const CurrentToolDisplay: React.FC<CurrentToolDisplayProps> = ({ currentT
     const baseDamage = def ? def.damage : 0;
     const finalDamage = baseDamage * damageMultiplier;
 
-    // Display damage as integer if whole, or 1 decimal if fractional
-    const damageDisplay = Number.isInteger(finalDamage) ? finalDamage.toString() : finalDamage.toFixed(1);
-
     const isBroken = toolHealth <= 0;
+
+    // Display damage: show as integer if whole, otherwise up to 3 decimal places
+    const damageDisplay = Number.isInteger(finalDamage)
+        ? finalDamage.toString()
+        : parseFloat(finalDamage.toFixed(3)).toString();
 
     // Pinkish hue for broken
     const textColor = isBroken ? '#F48FB1' : Colors.White;

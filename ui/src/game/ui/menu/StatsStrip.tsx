@@ -122,12 +122,12 @@ export const StatsStrip: React.FC<StatsStripProps> = ({
         }
     }
 
-    // Check for critically low resources (2 or fewer blocks) - only relevant ones
+    // Check for critically low resources (3 or fewer blocks) - only relevant ones
     let lowResourceWarning: { name: string; worldCount: number } | null = null;
 
     for (const resourceType of relevantResources) {
         const count = worldResourceCounts[resourceType] || 0;
-        if (count <= 2) {
+        if (count <= 3) {
             lowResourceWarning = {
                 name: BlockType[resourceType],
                 worldCount: count

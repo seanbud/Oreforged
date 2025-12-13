@@ -245,7 +245,7 @@ function App() {
         const nextHeight = 32 + modLevels.energy * 2;
         const oreMult = 1.0 + modLevels.ore * 0.5;
         const treeMult = 1.0 + modLevels.tree * 0.5;
-        const dmgMult = 1.0 + modLevels.damage * 0.5;
+        const dmgMult = 1.0 + modLevels.damage; // Flat +1 damage per level
 
         bridge.regenerateWorld(seedNum, nextSize, nextHeight, oreMult, treeMult, islandFactor);
 

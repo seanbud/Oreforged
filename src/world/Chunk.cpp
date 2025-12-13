@@ -554,17 +554,30 @@ void Chunk::GenerateTrees(uint32_t seed, float treeMult) {
             }
         }
         
-        // CRITICAL: Absolute guarantee - if we still have 0 trees, force place one in center
+        // CRITICAL: Absolute guarantee - if we still have 0 trees, force place one at island center
         if (treeCount == 0) {
-            int centerX = m_size / 2;
-            int centerZ = m_size / 2;
-            int centerY = FindSurfaceY(centerX, centerZ);
+            // Island center is at world coordinates (0, 0)
+            // Convert to local chunk coordinates
+            int localX = 0 - (m_chunkX * m_size);
+            int localZ = 0 - (m_chunkZ * m_size);
             
-            // Clear space and force place a tree at center
-            if (centerY >= SEA_LEVEL && centerY + 6 < m_height) {
-                // Ensure grass at surface
-                SetBlock(centerX, centerY, centerZ, BlockType::Grass);
-                PlaceTree(centerX, centerY + 1, centerZ, 3);
+            // Only place if the island center is in this chunk
+            if (localX >= 0 && localX < m_size && localZ >= 0 && localZ < m_size) {
+                int centerY = FindSurfaceY(localX, localZ);
+                
+                // EMERGENCY: Force place tree at island center, ignore all conditions
+                if (centerY < 0) centerY = SEA_LEVEL + 1; // Fallback to safe height
+                
+                // Ensure we have space
+                if (centerY + 6 >= m_height) {
+                    centerY = m_height - 7; // Move down if too high
+                }
+                
+                // Force grass at surface
+                SetBlock(localX, centerY, localZ, BlockType::Grass);
+                
+                // FORCE PLACE TREE - no conditions
+                PlaceTree(localX, centerY + 1, localZ, 3);
                 treeCount = 1;
             }
         }

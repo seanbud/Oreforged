@@ -31,6 +31,7 @@ Thumbs.db
 *.dll
 *.lib
 *.pdb
+*.zip
 
 # Logs
 *.log

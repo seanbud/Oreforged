@@ -543,6 +543,8 @@ void Game::TryRepair() {
 void Game::UnlockCrafting() {
     m_state.craftingUnlocked = true;
     UpdateFacet("unlock_crafting", "true");
+    UpdateFacet("show_toast", "\"⚒️ Crafting Unlocked!\"");
+    PushPlayerStats();  // Update cost display immediately
 }
 
 void Game::TryRegenerate(const std::string& seedStr, bool autoRandomize) {

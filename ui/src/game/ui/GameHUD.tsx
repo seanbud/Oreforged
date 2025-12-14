@@ -10,20 +10,20 @@ import { useFacetState } from '../../engine/hooks';
 import { bridge } from '../../engine/bridge';
 import { BlockType, ToolTier } from '../data/GameDefinitions';
 import { Facets } from '../data/Facets';
+import { PositiveBurstOverlay } from './PositiveBurstOverlay';
+import { ToastNotification } from './ToastNotification';
 
 interface GameHUDProps {
     isMenuOpen: boolean;
     worldStats: Partial<Record<BlockType, number>>; // Passed from Renderer
 }
 
-import { PositiveBurstOverlay } from './PositiveBurstOverlay';
-// ... imports
-
 export const GameHUD: React.FC<GameHUDProps> = ({ isMenuOpen, worldStats }) => {
     const stats = useFacetState(Facets.PlayerStats);
     const ups = useFacetState(Facets.Progression);
     const inv = useFacetState(Facets.Inventory);
     const hasCalibrated = Boolean(useFacetState(Facets.UnlockCrafting));
+    const toastMessage = useFacetState(Facets.ShowToast);
 
     const currentTool = stats.currentTool as ToolTier;
 
@@ -91,6 +91,11 @@ export const GameHUD: React.FC<GameHUDProps> = ({ isMenuOpen, worldStats }) => {
                     />
                 </>
             )}
+
+            <ToastNotification
+                message={toastMessage}
+                onComplete={() => bridge.call('updateGame', ['show_toast', ''])}
+            />
         </HUDLayer>
     );
 }

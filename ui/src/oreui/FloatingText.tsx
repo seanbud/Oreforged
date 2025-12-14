@@ -65,7 +65,7 @@ export const useFloatingTexts = (duration: number = 1000) => {
     const [texts, setTexts] = React.useState<FloatingTextItem[]>([]);
     const nextId = React.useRef(0);
 
-    const addText = (text: string, randomOffset: boolean = true) => {
+    const addText = React.useCallback((text: string, randomOffset: boolean = true) => {
         const offset = randomOffset ? (Math.random() - 0.5) * 40 : 0;
         const id = nextId.current++;
 
@@ -74,7 +74,7 @@ export const useFloatingTexts = (duration: number = 1000) => {
         setTimeout(() => {
             setTexts(prev => prev.filter(t => t.id !== id));
         }, duration);
-    };
+    }, [duration]);
 
     return { texts, addText };
 };

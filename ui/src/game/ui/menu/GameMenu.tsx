@@ -5,6 +5,7 @@ import Button from '../../../oreui/Button';
 import Toggle from '../../../oreui/Toggle';
 import { Input } from '../../../oreui/Input';
 import { Slider } from '../../../oreui/Slider';
+import { FloatingTextContainer, useFloatingTexts } from '../../../oreui/FloatingText';
 import { useFacetState } from '../../../engine/hooks';
 import { bridge } from '../../../engine/bridge';
 
@@ -154,26 +155,18 @@ const RegenButton = ({ seed, autoRand }: { seed: string, autoRand: boolean }) =>
 
     // Track cost changes for floating text
     const [prevCost, setPrevCost] = React.useState(cost);
-    const [floatingTexts, setFloatingTexts] = React.useState<Array<{ id: number, amount: number, offset: number }>>([]);
     const [shake, setShake] = React.useState(false);
-    const nextId = React.useRef(0);
+    const { texts, addText } = useFloatingTexts(1000);
 
     React.useEffect(() => {
         if (cost < prevCost && prevCost > 0) {
             const reduction = prevCost - cost;
-            const randomOffset = (Math.random() - 0.5) * 40; // -20 to +20 px
-
-            setFloatingTexts(prev => [...prev, { id: nextId.current++, amount: reduction, offset: randomOffset }]);
+            addText(`cost -${reduction}`);
             setShake(true);
             setTimeout(() => setShake(false), 200);
-
-            // Remove after animation
-            setTimeout(() => {
-                setFloatingTexts(prev => prev.filter(t => t.id !== nextId.current - 1));
-            }, 1000);
         }
         setPrevCost(cost);
-    }, [cost, prevCost]);
+    }, [cost, prevCost, addText]);
 
     // Determine cost display text
     let costText = "Free";
@@ -185,28 +178,7 @@ const RegenButton = ({ seed, autoRand }: { seed: string, autoRand: boolean }) =>
 
     return (
         <div style={{ position: 'relative' }}>
-            {/* Floating cost reduction texts */}
-            {floatingTexts.map(text => (
-                <div
-                    key={text.id}
-                    style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: `calc(50% + ${text.offset}px)`,
-                        transform: 'translate(-50%, -50%)',
-                        color: '#4CAF50',
-                        fontWeight: 'bold',
-                        fontSize: '16px',
-                        fontFamily: '"Minecraft", "Press Start 2P", monospace',
-                        pointerEvents: 'none',
-                        animation: 'floatUp 1s ease-out forwards',
-                        textShadow: '2px 2px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000, -1px 1px 0px #000',
-                        zIndex: 1000
-                    }}
-                >
-                    -{text.amount}
-                </div>
-            ))}
+            <FloatingTextContainer texts={texts} color="#DDDDDD" fontSize="12px" />
 
             <Button
                 onClick={() => bridge.call('regenerateWorld', [parseInt(seed), autoRand])}
@@ -223,17 +195,6 @@ const RegenButton = ({ seed, autoRand }: { seed: string, autoRand: boolean }) =>
             </Button>
 
             <style>{`
-                @keyframes floatUp {
-                    0% {
-                        opacity: 1;
-                        transform: translate(-50%, -50%) translateY(0px);
-                    }
-                    100% {
-                        opacity: 0;
-                        transform: translate(-50%, -50%) translateY(-40px);
-                    }
-                }
-                
                 @keyframes subtleShake {
                     0%, 100% { transform: translateX(0); }
                     25% { transform: translateX(-2px); }

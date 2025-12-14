@@ -1,5 +1,5 @@
 import React from 'react';
-import { Colors, Styles } from '../../../design/tokens';
+import { Colors } from '../../../design/tokens';
 import Panel from '../../../oreui/Panel';
 import Button from '../../../oreui/Button';
 import Toggle from '../../../oreui/Toggle';
@@ -149,30 +149,98 @@ const RegenButton = ({ seed, autoRand }: { seed: string, autoRand: boolean }) =>
     const generating = useFacetState(Facets.IsGenerating);
     const stats = useFacetState(Facets.PlayerStats);
     const isUnlocked = Boolean(useFacetState(Facets.UnlockCrafting));
-    // Cost is now authoritative from backend (regenCost)
-    // Fallback to 0 if undefined during init
-    const cost = stats.regenCost !== undefined ? stats.regenCost : (stats.totalMined >= 30 ? 30 : 0);
+    const cost = stats.regenCost !== undefined ? stats.regenCost : 0;
     const canAfford = stats.totalMined >= cost;
+
+    // Track cost changes for floating text
+    const [prevCost, setPrevCost] = React.useState(cost);
+    const [floatingTexts, setFloatingTexts] = React.useState<Array<{ id: number, amount: number, offset: number }>>([]);
+    const [shake, setShake] = React.useState(false);
+    const nextId = React.useRef(0);
+
+    React.useEffect(() => {
+        if (cost < prevCost && prevCost > 0) {
+            const reduction = prevCost - cost;
+            const randomOffset = (Math.random() - 0.5) * 40; // -20 to +20 px
+
+            setFloatingTexts(prev => [...prev, { id: nextId.current++, amount: reduction, offset: randomOffset }]);
+            setShake(true);
+            setTimeout(() => setShake(false), 200);
+
+            // Remove after animation
+            setTimeout(() => {
+                setFloatingTexts(prev => prev.filter(t => t.id !== nextId.current - 1));
+            }, 1000);
+        }
+        setPrevCost(cost);
+    }, [cost, prevCost]);
 
     // Determine cost display text
     let costText = "Free";
     if (isUnlocked) {
-        // Once crafting is unlocked, always show cost in blocks format
         costText = cost > 0 ? `Cost: ${cost} Blocks` : `0 Blocks`;
     } else if (stats.totalMined > 0 || stats.currentTool !== 0) {
-        // Game has started but crafting not unlocked yet
         costText = cost > 0 ? `Cost: ${cost} Blocks` : `Free`;
     }
 
     return (
-        <Button
-            onClick={() => bridge.call('regenerateWorld', [parseInt(seed), autoRand])}
-            disabled={generating || !canAfford}
-            variant="green"
-            style={{ marginTop: '10px', width: '100%', opacity: (generating || !canAfford) ? 0.7 : 1 }}
-        >
-            {generating ? "Regenerating..." : `Regenerate World (${costText})`}
-        </Button>
+        <div style={{ position: 'relative' }}>
+            {/* Floating cost reduction texts */}
+            {floatingTexts.map(text => (
+                <div
+                    key={text.id}
+                    style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: `calc(50% + ${text.offset}px)`,
+                        transform: 'translate(-50%, -50%)',
+                        color: '#4CAF50',
+                        fontWeight: 'bold',
+                        fontSize: '16px',
+                        fontFamily: '"Minecraft", "Press Start 2P", monospace',
+                        pointerEvents: 'none',
+                        animation: 'floatUp 1s ease-out forwards',
+                        textShadow: '2px 2px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000, -1px 1px 0px #000',
+                        zIndex: 1000
+                    }}
+                >
+                    -{text.amount}
+                </div>
+            ))}
+
+            <Button
+                onClick={() => bridge.call('regenerateWorld', [parseInt(seed), autoRand])}
+                disabled={generating || !canAfford}
+                variant="green"
+                style={{
+                    marginTop: '10px',
+                    width: '100%',
+                    opacity: (generating || !canAfford) ? 0.7 : 1,
+                    animation: shake ? 'subtleShake 0.2s ease-in-out' : 'none'
+                }}
+            >
+                {generating ? "Regenerating..." : `Regenerate World (${costText})`}
+            </Button>
+
+            <style>{`
+                @keyframes floatUp {
+                    0% {
+                        opacity: 1;
+                        transform: translate(-50%, -50%) translateY(0px);
+                    }
+                    100% {
+                        opacity: 0;
+                        transform: translate(-50%, -50%) translateY(-40px);
+                    }
+                }
+                
+                @keyframes subtleShake {
+                    0%, 100% { transform: translateX(0); }
+                    25% { transform: translateX(-2px); }
+                    75% { transform: translateX(2px); }
+                }
+            `}</style>
+        </div>
     );
 };
 

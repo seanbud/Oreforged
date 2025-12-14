@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cmath>
 #include <thread>
+#include <algorithm>
 #ifdef _WIN32
   #include <Windows.h>
 #elif __linux__
@@ -496,6 +497,7 @@ void Game::TryBuyUpgrade(const std::string& type) {
 
     if (m_state.progression.totalMined >= cost) {
         m_state.progression.totalMined -= cost;
+        m_state.progression.spentOnCurrentGen += cost;  // Reduces regen cost
         
         if (type == "tree") m_state.progression.treeLevel++;
         else if (type == "ore") m_state.progression.oreLevel++;
@@ -546,13 +548,15 @@ void Game::UnlockCrafting() {
 void Game::TryRegenerate(const std::string& seedStr, bool autoRandomize) {
     if (m_state.isGenerating) return;
     
-    // Simple cost logic:
-    // - Before unlock: Free
-    // - After unlock: REGENERATION_COST (30 blocks)
-    long long cost = m_state.craftingUnlocked ? REGENERATION_COST : 0;
+    // Calculate cost with spending reduction
+    long long cost = 0;
+    if (m_state.craftingUnlocked) {
+        cost = (std::max)(0LL, REGENERATION_COST - m_state.progression.spentOnCurrentGen);
+    }
     
     if (m_state.progression.totalMined >= cost) {
         m_state.progression.totalMined -= cost;
+        m_state.progression.spentOnCurrentGen = 0;  // Reset for new world
         PushPlayerStats();
     } else {
         return; // Cannot afford
@@ -627,6 +631,7 @@ void Game::TryRegenerate(const std::string& seedStr, bool autoRandomize) {
 void Game::ResetProgression() {
     // HARD RESET / FULL WIPE
     m_state.progression.totalMined = 0;
+    m_state.progression.spentOnCurrentGen = 0;
     m_state.progression.treeLevel = 0;
     m_state.progression.oreLevel = 0;
     m_state.progression.energyLevel = 0;
@@ -675,13 +680,18 @@ void Game::PushInventory() {
 }
 
 void Game::PushPlayerStats() {
+    long long regenCost = 0;
+    if (m_state.craftingUnlocked) {
+        regenCost = (std::max)(0LL, REGENERATION_COST - m_state.progression.spentOnCurrentGen);
+    }
+    
     json stats = {
         {"totalMined", m_state.progression.totalMined},
         {"currentTool", static_cast<int>(m_state.player.currentTool)},
         {"toolHealth", m_state.player.toolHealth},
         {"isToolBroken", m_state.player.isToolBroken},
         {"damageMultiplier", 1.0f + m_state.progression.damageLevel},
-        {"regenCost", m_state.craftingUnlocked ? REGENERATION_COST : 0}
+        {"regenCost", regenCost}
     };
 
     UpdateFacetJSON("player_stats", stats.dump());

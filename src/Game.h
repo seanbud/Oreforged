@@ -48,6 +48,7 @@ struct ProgressionState {
     int energyLevel = 0;
     int damageLevel = 0;
     long long totalMined = 0;
+    long long spentOnCurrentGen = 0;  // Reduces regen cost
 };
 
 struct PlayerState {

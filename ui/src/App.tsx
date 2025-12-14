@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { VoxelRenderer } from './game/VoxelRenderer';
 import { bridge } from './engine/bridge';
 import { GameLayout, GameLayer, HUDLayer } from './layouts/GameLayout';

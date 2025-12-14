@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cmath>
 #include <thread>
+#include <algorithm>
 #ifdef _WIN32
   #include <Windows.h>
 #elif __linux__
@@ -496,7 +497,7 @@ void Game::TryBuyUpgrade(const std::string& type) {
 
     if (m_state.progression.totalMined >= cost) {
         m_state.progression.totalMined -= cost;
-        m_state.progression.spentOnCurrentGen += cost; // Track spending!
+        m_state.progression.spentOnCurrentGen += cost;  // Reduces regen cost
         
         if (type == "tree") m_state.progression.treeLevel++;
         else if (type == "ore") m_state.progression.oreLevel++;
@@ -540,45 +541,22 @@ void Game::TryRepair() {
 }
 
 void Game::UnlockCrafting() {
+    m_state.craftingUnlocked = true;
     UpdateFacet("unlock_crafting", "true");
 }
 
 void Game::TryRegenerate(const std::string& seedStr, bool autoRandomize) {
     if (m_state.isGenerating) return;
     
-    // Cost Check: 30 blocks minus whatever was spent this gen.
-    // If not calibrated (no crafting unlocked), it's free.
-    // We check 'unlock_crafting' facet indirectly (we need to track it in backend if possible, or assume totalMined check?)
-    // Actually, let's track 'hasCalibrated' in GameState? 
-    // For now, let's use the legacy logic proxy: if (totalMined < 30) or simply (spent check).
-    
-    // Legacy: Cost = max(0, 30 - spentOnCurrentGen).
-    // If hasCalibrated is false, it's free.
-    
-    // Determine 'hasCalibrated' - simpliest is: do we have tools? or totalMined > X?
-    // Let's rely on standard cost logic mostly, but if totalMined is low, allow free?
-    // User said: "Regen cost on main... exact behavior".
-    // Main behavior: hasCalibrated ? cost : Free.
-    
-    // Since we don't store hasCalibrated in C++ state explicitly (only facet), let's add it or infer.
-    // Inference: If treeLevel > 0 OR currentTool > HAND, we definitely calibrated.
-    bool hasCalibrated = (m_state.progression.treeLevel > 0 || m_state.player.currentTool != ToolTier::HAND || m_state.progression.totalMined > 50);
-
+    // Calculate cost with spending reduction
     long long cost = 0;
-    if (hasCalibrated) {
-        long long deduction = 30;
-        if (m_state.progression.spentOnCurrentGen < deduction) {
-            cost = deduction - m_state.progression.spentOnCurrentGen;
-        }
+    if (m_state.craftingUnlocked) {
+        cost = (std::max)(0LL, REGENERATION_COST - m_state.progression.spentOnCurrentGen);
     }
-
+    
     if (m_state.progression.totalMined >= cost) {
         m_state.progression.totalMined -= cost;
-        
-        // Reset "Spent on Current Gen" for the NEW world BEFORE pushing stats
-        // so that the regen cost calculation shows the correct value
-        m_state.progression.spentOnCurrentGen = 0;
-        
+        m_state.progression.spentOnCurrentGen = 0;  // Reset for new world
         PushPlayerStats();
     } else {
         return; // Cannot afford
@@ -653,7 +631,7 @@ void Game::TryRegenerate(const std::string& seedStr, bool autoRandomize) {
 void Game::ResetProgression() {
     // HARD RESET / FULL WIPE
     m_state.progression.totalMined = 0;
-    m_state.progression.spentOnCurrentGen = 0; // Reset tracking
+    m_state.progression.spentOnCurrentGen = 0;
     m_state.progression.treeLevel = 0;
     m_state.progression.oreLevel = 0;
     m_state.progression.energyLevel = 0;
@@ -670,6 +648,7 @@ void Game::ResetProgression() {
     m_state.player.isToolBroken = false;
 
     // Reset Flags
+    m_state.craftingUnlocked = false;
     UpdateFacet("unlock_crafting", "false");
 
     // Push Updates
@@ -701,27 +680,19 @@ void Game::PushInventory() {
 }
 
 void Game::PushPlayerStats() {
+    long long regenCost = 0;
+    if (m_state.craftingUnlocked) {
+        regenCost = (std::max)(0LL, REGENERATION_COST - m_state.progression.spentOnCurrentGen);
+    }
+    
     json stats = {
         {"totalMined", m_state.progression.totalMined},
         {"currentTool", static_cast<int>(m_state.player.currentTool)},
         {"toolHealth", m_state.player.toolHealth},
         {"isToolBroken", m_state.player.isToolBroken},
         {"damageMultiplier", 1.0f + m_state.progression.damageLevel},
-        {"regenCost", 0} // Placeholder, need logic here?
-        // Actually, logic is conditional (hasCalibrated). 
-        // Let's calculate it here.
+        {"regenCost", regenCost}
     };
-    
-    // Better: Calculate cost locally
-    bool hasCalibrated = (m_state.progression.treeLevel > 0 || m_state.player.currentTool != ToolTier::HAND || m_state.progression.totalMined > 50);
-    long long cost = 0;
-    if (hasCalibrated) {
-        long long deduction = 30;
-        if (m_state.progression.spentOnCurrentGen < deduction) {
-            cost = deduction - m_state.progression.spentOnCurrentGen;
-        }
-    }
-    stats["regenCost"] = cost;
 
     UpdateFacetJSON("player_stats", stats.dump());
 }

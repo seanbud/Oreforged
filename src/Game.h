@@ -10,6 +10,9 @@ struct WebviewWrapper;
 #include <vector>
 #include "world/World.h"
 
+// Game Constants
+constexpr long long REGENERATION_COST = 30;
+
 // Game Definitions
 enum class BlockType {
     Air = 0,
@@ -45,7 +48,7 @@ struct ProgressionState {
     int energyLevel = 0;
     int damageLevel = 0;
     long long totalMined = 0;
-    long long spentOnCurrentGen = 0;
+    long long spentOnCurrentGen = 0;  // Reduces regen cost
 };
 
 struct PlayerState {
@@ -59,7 +62,8 @@ struct GameState {
     int renderDistance = 12;
     long long tickCount = 0;
     bool isGenerating = false;
-    bool countWaterAsCurrency = true; // Default to true per request
+    bool countWaterAsCurrency = true;
+    bool craftingUnlocked = false;
     
     // Core Game Data
     std::map<int, int> inventory;

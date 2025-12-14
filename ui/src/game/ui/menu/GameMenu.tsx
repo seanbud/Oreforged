@@ -1,10 +1,11 @@
 import React from 'react';
-import { Colors, Styles } from '../../../design/tokens';
+import { Colors } from '../../../design/tokens';
 import Panel from '../../../oreui/Panel';
 import Button from '../../../oreui/Button';
 import Toggle from '../../../oreui/Toggle';
 import { Input } from '../../../oreui/Input';
 import { Slider } from '../../../oreui/Slider';
+import { FloatingTextContainer, useFloatingTexts } from '../../../oreui/FloatingText';
 import { useFacetState } from '../../../engine/hooks';
 import { bridge } from '../../../engine/bridge';
 
@@ -149,30 +150,58 @@ const RegenButton = ({ seed, autoRand }: { seed: string, autoRand: boolean }) =>
     const generating = useFacetState(Facets.IsGenerating);
     const stats = useFacetState(Facets.PlayerStats);
     const isUnlocked = Boolean(useFacetState(Facets.UnlockCrafting));
-    // Cost is now authoritative from backend (regenCost)
-    // Fallback to 0 if undefined during init
-    const cost = stats.regenCost !== undefined ? stats.regenCost : (stats.totalMined >= 30 ? 30 : 0);
+    const cost = stats.regenCost !== undefined ? stats.regenCost : 0;
     const canAfford = stats.totalMined >= cost;
+
+    // Track cost changes for floating text
+    const [prevCost, setPrevCost] = React.useState(cost);
+    const [shake, setShake] = React.useState(false);
+    const { texts, addText } = useFloatingTexts(1000);
+
+    React.useEffect(() => {
+        if (cost < prevCost && prevCost > 0) {
+            const reduction = prevCost - cost;
+            addText(`cost -${reduction}`);
+            setShake(true);
+            setTimeout(() => setShake(false), 200);
+        }
+        setPrevCost(cost);
+    }, [cost, prevCost, addText]);
 
     // Determine cost display text
     let costText = "Free";
     if (isUnlocked) {
-        // Once crafting is unlocked, always show cost in blocks format
         costText = cost > 0 ? `Cost: ${cost} Blocks` : `0 Blocks`;
     } else if (stats.totalMined > 0 || stats.currentTool !== 0) {
-        // Game has started but crafting not unlocked yet
         costText = cost > 0 ? `Cost: ${cost} Blocks` : `Free`;
     }
 
     return (
-        <Button
-            onClick={() => bridge.call('regenerateWorld', [parseInt(seed), autoRand])}
-            disabled={generating || !canAfford}
-            variant="green"
-            style={{ marginTop: '10px', width: '100%', opacity: (generating || !canAfford) ? 0.7 : 1 }}
-        >
-            {generating ? "Regenerating..." : `Regenerate World (${costText})`}
-        </Button>
+        <div style={{ position: 'relative' }}>
+            <FloatingTextContainer texts={texts} color="#DDDDDD" fontSize="12px" />
+
+            <Button
+                onClick={() => bridge.call('regenerateWorld', [parseInt(seed), autoRand])}
+                disabled={generating || !canAfford}
+                variant="green"
+                style={{
+                    marginTop: '10px',
+                    width: '100%',
+                    opacity: (generating || !canAfford) ? 0.7 : 1,
+                    animation: shake ? 'subtleShake 0.2s ease-in-out' : 'none'
+                }}
+            >
+                {generating ? "Regenerating..." : `Regenerate World (${costText})`}
+            </Button>
+
+            <style>{`
+                @keyframes subtleShake {
+                    0%, 100% { transform: translateX(0); }
+                    25% { transform: translateX(-2px); }
+                    75% { transform: translateX(2px); }
+                }
+            `}</style>
+        </div>
     );
 };
 

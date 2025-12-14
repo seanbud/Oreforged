@@ -62,7 +62,48 @@ function TickCounter() {
 }
 ```
 
-## UI → C++: Sending Actions
+## UI → C++: Game Actions
+
+In v6.0, game logic lives in C++. The UI sends **actions** to the backend, which validates and executes them.
+
+### Calling Game Actions
+
+Use `bridge.call()` to invoke C++ game methods:
+
+```tsx
+import { bridge } from './engine/bridge';
+
+// Crafting
+const recipe = { cost: { 5: 3, 6: 2 }, result: 1 };
+bridge.call('craft', [JSON.stringify(recipe)]);
+
+// Upgrades
+bridge.call('upgrade', ['tree']);
+bridge.call('upgrade', ['ore']);
+
+// Tool Repair
+bridge.call('repairTool', []);
+
+// World Regeneration
+bridge.call('regenerateWorld', [12345, true]);
+
+// Progression
+bridge.call('unlockCrafting', []);
+bridge.call('resetProgression', []);
+```
+
+### How It Works
+
+1. UI calls `bridge.call('craft', [recipeJson])`
+2. Bridge sends JSON array to C++ binding
+3. C++ parses args and calls `TryCraft(recipeJson)`
+4. C++ validates affordability, deducts resources, grants tool
+5. C++ calls `PushInventory()` and `PushPlayerStats()`
+6. UI facets update automatically
+
+The UI **never** mutates game state directly. All changes go through C++.
+
+## UI → C++: Sending Actions (Legacy)
 
 ### Step 1: Call from React
 

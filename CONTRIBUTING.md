@@ -82,15 +82,27 @@ export default ProgressBar;
 **Example**:
 
 ```cpp
-// Good: Clear, focused function
-void Game::UpdatePlayerPosition(float deltaTime) {
-    m_state.playerX += m_state.velocityX * deltaTime;
-    m_state.playerY += m_state.velocityY * deltaTime;
+// Good: Clear, focused game action
+void Game::TryCraft(const std::string& recipeJson) {
+    json recipe = json::parse(recipeJson);
     
-    UpdateFacet("player_pos", json{
-        {"x", m_state.playerX},
-        {"y", m_state.playerY}
-    }.dump());
+    // Validate affordability
+    for (const auto& [item, amount] : recipe["cost"].items()) {
+        if (m_state.inventory[item] < amount) return;
+    }
+    
+    // Deduct costs
+    for (const auto& [item, amount] : recipe["cost"].items()) {
+        m_state.inventory[item] -= amount;
+    }
+    
+    // Grant tool
+    m_state.player.currentTool = recipe["result"];
+    m_state.player.toolHealth = 100.0f;
+    
+    // Sync to UI
+    PushInventory();
+    PushPlayerStats();
 }
 ```
 
@@ -198,10 +210,11 @@ Pass Facets through component trees instead of unwrapping early.
 
 ```tsx
 // ✅ Good
-<HealthBar health={healthFacet} />
+import { Facets } from './game/data/Facets';
+<HealthBar health={Facets.PlayerStats} />
 
 // ❌ Bad
-<HealthBar health={useFacetValue(healthFacet)} />
+<HealthBar health={useFacetValue(Facets.PlayerStats)} />
 ```
 
 ### 2. Zero React Re-renders

@@ -68,6 +68,44 @@ Components that accept Facets in props:
 }} />
 ```
 
+## Centralized Facets (v6.0)
+
+Game state Facets are centralized in `ui/src/game/data/Facets.ts`:
+
+```typescript
+export const Facets = {
+    PlayerStats: remoteFacet('player_stats', {
+        totalMined: 0,
+        currentTool: 0,
+        toolHealth: 100,
+        isToolBroken: false,
+        damageMultiplier: 1.0,
+    }),
+    Inventory: remoteFacet('inventory', {} as Record<BlockType, number>),
+    Progression: remoteFacet('progression', {
+        tree: 0,
+        ore: 0,
+        energy: 0,
+        damage: 0,
+    }),
+};
+```
+
+Components import these instead of creating their own:
+
+```tsx
+import { Facets } from './game/data/Facets';
+
+function GameHUD() {
+    const stats = useFacetState(Facets.PlayerStats);
+    const inventory = useFacetState(Facets.Inventory);
+    
+    return <div>Blocks Mined: {stats.totalMined}</div>;
+}
+```
+
+**Why centralize?** It eliminates duplicate facet definitions and ensures all components observe the same state.
+
 ## The Three Principles
 
 ### Principle 1: Facets All The Way Down
@@ -162,6 +200,7 @@ A `div` that accepts Facets in its `style` prop.
 
 ### ✅ Do
 
+- Use centralized Facets from `Facets.ts` for game state
 - Pass Facets through component props
 - Use `useFacetMap` for transformations
 - Use `FastDiv` for dynamic styles
@@ -169,6 +208,7 @@ A `div` that accepts Facets in its `style` prop.
 
 ### ❌ Don't
 
+- Create new facets for existing game state (import from `Facets.ts`)
 - Call `useFacetValue` unless necessary
 - Mix Facets with `useState` for the same data
 - Create Facets inside render functions

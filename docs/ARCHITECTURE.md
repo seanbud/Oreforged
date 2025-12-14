@@ -1,3 +1,54 @@
+# Architecture Overview
+
+In v6.0, the architecture centers on **backend-authoritative state management**. The C++ game engine owns all game logic (crafting, upgrades, progression), and the React UI is a view layer that renders this state.
+
+## Backend-Authoritative State
+
+All game state lives in C++:
+
+```cpp
+struct GameState {
+    std::map<int, int> inventory;
+    ProgressionState progression;
+    PlayerState player;
+    OreForged::World world;
+};
+```
+
+The UI observes this state through **Facets** — reactive data bindings that update automatically when C++ pushes changes:
+
+```typescript
+// ui/src/game/data/Facets.ts
+export const Facets = {
+    PlayerStats: remoteFacet('player_stats', {...}),
+    Inventory: remoteFacet('inventory', {...}),
+    Progression: remoteFacet('progression', {...}),
+};
+```
+
+Components import and observe these centralized Facets:
+
+```tsx
+import { Facets } from './game/data/Facets';
+
+const stats = useFacetState(Facets.PlayerStats);
+const inventory = useFacetState(Facets.Inventory);
+```
+
+When game state changes in C++, the backend pushes updates to the UI:
+
+```cpp
+void Game::CollectResource(int blockTypeId, int count) {
+    m_state.inventory[blockTypeId] += count;
+    m_state.progression.totalMined += count;
+    
+    PushInventory();      // Sync to UI
+    PushPlayerStats();    // Sync to UI
+    PushProgression();    // Sync to UI
+}
+```
+
+This architecture eliminates state synchronization bugs — there's only one source of truth.
 
 ## Layer Breakdown
 
@@ -23,9 +74,23 @@ public:
     void Update();           // Called 60 times/second
     void UpdateFacet(...);   // Push state to UI
     
+    // Game Actions (v6.0)
+    void CollectResource(int blockTypeId, int count);
+    void TryCraft(const std::string& recipeJson);
+    void TryBuyUpgrade(const std::string& type);
+    void TryRepair();
+    void TryRegenerate(const std::string& seedStr, bool autoRandomize);
+    void UnlockCrafting();
+    void ResetProgression();
+    
 private:
     void GameLoop();         // Threaded loop
     void InitUI();           // Setup webview
+    
+    // State Sync
+    void PushInventory();
+    void PushPlayerStats();
+    void PushProgression();
     
     GameState m_state;
     std::unique_ptr<WebviewWrapper> m_webview;
@@ -55,6 +120,21 @@ m_webview->w.bind("updateState", [](std::string seq, std::string req, void*) {
     // Handle request
     m_webview->w.resolve(seq, 0, "OK");
 }, nullptr);
+
+// Game Action Bindings (v6.0)
+m_webview->w.bind("craft", [&](std::string seq, std::string req, void*) {
+    auto args = json::parse(req);
+    TryCraft(args[0].get<std::string>());
+    m_webview->w.resolve(seq, 0, "\"OK\"");
+}, nullptr);
+
+m_webview->w.bind("upgrade", [&](std::string seq, std::string req, void*) {
+    auto args = json::parse(req);
+    TryBuyUpgrade(args[0].get<std::string>());
+    m_webview->w.resolve(seq, 0, "\"OK\"");
+}, nullptr);
+
+// More bindings: repairTool, regenerateWorld, unlockCrafting, resetProgression
 ```
 
 ### 3. JavaScript Bridge Layer

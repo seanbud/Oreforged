@@ -30,6 +30,7 @@
 
 ## ✨ Key Features
 
+-   **Backend-Authoritative**: C++ owns all game logic, UI is a view layer
 -   **Zero React Re-renders**: Direct DOM updates via Facets bypass React reconciliation
 -   **60 TPS Game Loop**: Smooth C++ game logic running in parallel with UI
 -   **Mojang-Inspired Facets**: Using the same open-source library pattern as Minecraft Bedrock

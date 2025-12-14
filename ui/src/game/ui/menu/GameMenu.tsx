@@ -122,18 +122,23 @@ export const GameMenu: React.FC<GameMenuProps> = ({
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'center', marginTop: '15px' }}>
-                    <Button
+                    <a
                         onClick={() => bridge.call('resetProgression', [])}
-                        variant="red"
                         style={{
-                            fontSize: '10px',
-                            padding: '6px 12px',
-                            width: 'auto',
-                            minWidth: '120px'
+                            fontSize: '11px',
+                            color: '#cc5544',
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                            fontFamily: '"Minecraft", "Press Start 2P", monospace',
+                            opacity: 0.7,
+                            transition: 'opacity 0.2s',
+                            userSelect: 'none'
                         }}
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
                     >
                         Reset Game (Full Wipe)
-                    </Button>
+                    </a>
                 </div>
             </Panel >
         </div >

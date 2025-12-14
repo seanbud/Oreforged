@@ -574,6 +574,11 @@ void Game::TryRegenerate(const std::string& seedStr, bool autoRandomize) {
 
     if (m_state.progression.totalMined >= cost) {
         m_state.progression.totalMined -= cost;
+        
+        // Reset "Spent on Current Gen" for the NEW world BEFORE pushing stats
+        // so that the regen cost calculation shows the correct value
+        m_state.progression.spentOnCurrentGen = 0;
+        
         PushPlayerStats();
     } else {
         return; // Cannot afford
@@ -581,9 +586,6 @@ void Game::TryRegenerate(const std::string& seedStr, bool autoRandomize) {
 
     m_state.isGenerating = true;
     UpdateFacet("is_generating", "true");
-    
-    // Reset "Spent on Current Gen" for the NEW world
-    m_state.progression.spentOnCurrentGen = 0;
 
     // ... (rest is same)
     

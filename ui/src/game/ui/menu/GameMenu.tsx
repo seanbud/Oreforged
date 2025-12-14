@@ -148,10 +148,21 @@ export const GameMenu: React.FC<GameMenuProps> = ({
 const RegenButton = ({ seed, autoRand }: { seed: string, autoRand: boolean }) => {
     const generating = useFacetState(Facets.IsGenerating);
     const stats = useFacetState(Facets.PlayerStats);
+    const isUnlocked = Boolean(useFacetState(Facets.UnlockCrafting));
     // Cost is now authoritative from backend (regenCost)
     // Fallback to 0 if undefined during init
     const cost = stats.regenCost !== undefined ? stats.regenCost : (stats.totalMined >= 30 ? 30 : 0);
     const canAfford = stats.totalMined >= cost;
+
+    // Determine cost display text
+    let costText = "Free";
+    if (isUnlocked) {
+        // Once crafting is unlocked, always show cost in blocks format
+        costText = cost > 0 ? `Cost: ${cost} Blocks` : `0 Blocks`;
+    } else if (stats.totalMined > 0 || stats.currentTool !== 0) {
+        // Game has started but crafting not unlocked yet
+        costText = cost > 0 ? `Cost: ${cost} Blocks` : `Free`;
+    }
 
     return (
         <Button
@@ -160,11 +171,7 @@ const RegenButton = ({ seed, autoRand }: { seed: string, autoRand: boolean }) =>
             variant="green"
             style={{ marginTop: '10px', width: '100%', opacity: (generating || !canAfford) ? 0.7 : 1 }}
         >
-            {generating ? "Regenerating..." :
-                (stats.totalMined > 0 || stats.currentTool !== 0 ? // If game has started
-                    `Regenerate World (${cost > 0 ? "Cost: " + cost + " Blocks" : "Free"})`
-                    : "Regenerate World (Free)") // Clean slate
-            }
+            {generating ? "Regenerating..." : `Regenerate World (${costText})`}
         </Button>
     );
 };

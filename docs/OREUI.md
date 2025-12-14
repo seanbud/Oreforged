@@ -68,7 +68,7 @@ Components that accept Facets in props:
 }} />
 ```
 
-## Centralized Facets (v6.0)
+## Centralized Facets
 
 Game state Facets are centralized in `ui/src/game/data/Facets.ts`:
 

@@ -1,6 +1,6 @@
 # Architecture Overview
 
-In v6.0, the architecture centers on **backend-authoritative state management**. The C++ game engine owns all game logic (crafting, upgrades, progression), and the React UI is a view layer that renders this state.
+The architecture centers on **backend-authoritative state management**. The C++ game engine owns all game logic (crafting, upgrades, progression), and the React UI is a view layer that renders this state.
 
 ## Backend-Authoritative State
 
@@ -74,7 +74,7 @@ public:
     void Update();           // Called 60 times/second
     void UpdateFacet(...);   // Push state to UI
     
-    // Game Actions (v6.0)
+    // Game Actions
     void CollectResource(int blockTypeId, int count);
     void TryCraft(const std::string& recipeJson);
     void TryBuyUpgrade(const std::string& type);
@@ -121,7 +121,7 @@ m_webview->w.bind("updateState", [](std::string seq, std::string req, void*) {
     m_webview->w.resolve(seq, 0, "OK");
 }, nullptr);
 
-// Game Action Bindings (v6.0)
+// Game Action Bindings
 m_webview->w.bind("craft", [&](std::string seq, std::string req, void*) {
     auto args = json::parse(req);
     TryCraft(args[0].get<std::string>());

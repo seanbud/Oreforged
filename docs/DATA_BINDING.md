@@ -64,7 +64,7 @@ function TickCounter() {
 
 ## UI → C++: Game Actions
 
-In v6.0, game logic lives in C++. The UI sends **actions** to the backend, which validates and executes them.
+Game logic lives in C++. The UI sends **actions** to the backend, which validates and executes them.
 
 ### Calling Game Actions
 

@@ -2,6 +2,7 @@
 #include "webview.h"
 #include <iostream>
 #include <cmath>
+#include <thread>
 #ifdef _WIN32
   #include <Windows.h>
 #elif __linux__
@@ -218,6 +219,26 @@ void Game::InitUI() {
         m_webview->w.resolve(seq, 0, "\"OK\"");
     }, nullptr);
 
+    // Toggle Water Currency
+    m_webview->w.bind("toggleWaterCurrency", [&](std::string seq, std::string req, void* /*arg*/) {
+        try {
+            auto args = json::parse(req);
+            bool enabled = false;
+            // Robust parsing for single boolean argument
+             if (args.is_array() && !args.empty()) {
+                if (args[0].is_boolean()) enabled = args[0];
+                else if (args[0].is_string()) { // Handling stringified boolean if necessary
+                    std::string s = args[0];
+                    if (s == "true") enabled = true;
+                }
+             }
+            ToggleWaterCurrency(enabled);
+            m_webview->w.resolve(seq, 0, "\"OK\"");
+        } catch(...) {
+             m_webview->w.resolve(seq, 1, "\"Error\"");
+        }
+    }, nullptr);
+
     // Portable executable path finding (Load UI)
     std::filesystem::path exePath;
 #ifdef _WIN32
@@ -282,6 +303,8 @@ void Game::GameLoop() {
 }
 
 void Game::Update() {
+    if (m_state.isGenerating) return;
+
     m_state.tickCount++;
     
     // Initial Gen
@@ -300,7 +323,7 @@ void Game::Update() {
 bool CanMine(int blockType, ToolTier tool) {
     if (blockType == (int)BlockType::Bedrock) return false;
     if (blockType == (int)BlockType::Air) return false;
-    if (blockType == (int)BlockType::Water) return false;
+    // Water is now mineable
 
     // Hand can mine basic resources
     if (tool == ToolTier::HAND) {
@@ -308,7 +331,8 @@ bool CanMine(int blockType, ToolTier tool) {
                blockType == (int)BlockType::Dirt || 
                blockType == (int)BlockType::Wood || 
                blockType == (int)BlockType::Leaves || 
-               blockType == (int)BlockType::Sand;
+               blockType == (int)BlockType::Sand ||
+               blockType == (int)BlockType::Water;
     }
     
     // Picks can mine everything Hand can + deeper
@@ -335,7 +359,8 @@ bool CanMine(int blockType, ToolTier tool) {
         blockType == (int)BlockType::Dirt || 
         blockType == (int)BlockType::Wood || 
         blockType == (int)BlockType::Leaves || 
-        blockType == (int)BlockType::Sand) return true;
+        blockType == (int)BlockType::Sand ||
+        blockType == (int)BlockType::Water) return true;
 
     return false;
 }
@@ -348,8 +373,12 @@ void Game::CollectResource(int blockTypeId, int count) {
 
     if (blockTypeId > 0) {
         m_state.inventory[blockTypeId] += count;
-        m_state.progression.totalMined += count;
         
+        bool isWater = (blockTypeId == (int)BlockType::Water);
+        if (!isWater || (isWater && m_state.countWaterAsCurrency)) {
+             m_state.progression.totalMined += count;
+        }
+
         // Tool Damage
         if (m_state.player.currentTool != ToolTier::HAND && !m_state.player.isToolBroken) {
             m_state.player.toolHealth = (std::max)(0.0f, m_state.player.toolHealth - 2.0f);
@@ -597,22 +626,26 @@ void Game::TryRegenerate(const std::string& seedStr, bool autoRandomize) {
         PushPlayerStats();
     }
 
-    // Execution
-    UpdateFacet("clear_chunks", "true");
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-    
-    m_state.world.Regenerate(seed, config);
-    m_state.world.LoadChunksAroundPosition(0, 0, 2);
-    
-    auto chunks = m_state.world.GetLoadedChunks();
-    for (const auto* chunk : chunks) {
-        std::string chunkData = chunk->Serialize();
-        UpdateFacetJSON("chunk_data", chunkData);
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
+    // Execution in detached thread to avoid blocking UI
+    std::thread([this, seed, config]() {
+        UpdateFacet("clear_chunks", "true");
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        
+        m_state.world.Regenerate(seed, config);
+        m_state.world.LoadChunksAroundPosition(0, 0, 2);
+        
+        auto chunks = m_state.world.GetLoadedChunks();
+        for (const auto* chunk : chunks) {
+            std::string chunkData = chunk->Serialize();
+            UpdateFacetJSON("chunk_data", chunkData);
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
 
-    m_state.isGenerating = false;
-    UpdateFacet("is_generating", "false");
+        m_state.isGenerating = false;
+        UpdateFacet("is_generating", "false");
+    }).detach();
+
+    // Loop ends here, function returns immediately
 }
 
 void Game::ResetProgression() {
@@ -648,6 +681,11 @@ void Game::ResetProgression() {
     // Legacy: `bridge.regenerateWorld(seedNum, ...)` where seedNum was input.
     // Let's just regen with random.
     TryRegenerate("12345", true);
+}
+
+void Game::ToggleWaterCurrency(bool enabled) {
+    m_state.countWaterAsCurrency = enabled;
+    UpdateFacet("count_water", enabled ? "true" : "false");
 }
 
 // --- STATE PUSHERS ---

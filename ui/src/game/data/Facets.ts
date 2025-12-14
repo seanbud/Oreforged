@@ -25,4 +25,5 @@ export const Facets = {
     // World & System
     WorldSeed: remoteFacet('world_seed', "12345"),
     IsGenerating: remoteFacet('is_generating', false),
+    CountWater: remoteFacet('count_water', false),
 };

@@ -1,7 +1,6 @@
 import React from 'react';
 import { HUDLayer } from '../../layouts/GameLayout';
 import VignetteOverlay from './VignetteOverlay';
-import ScanlineOverlay from './ScanlineOverlay';
 import TitleCard from '../../oreui/TitleCard';
 import { StatsStrip } from './menu/StatsStrip';
 import { ResourceManifest } from './ResourceManifest';
@@ -45,7 +44,7 @@ export const GameHUD: React.FC<GameHUDProps> = ({ isMenuOpen, worldStats }) => {
     return (
         <HUDLayer>
             <PositiveBurstOverlay isActive={showBurst} />
-            <ScanlineOverlay />
+            <PositiveBurstOverlay isActive={showBurst} />
             <VignetteOverlay healthRatio={stats.toolHealth / 100} isBroken={stats.isToolBroken} />
 
             {!isMenuOpen && (
@@ -81,8 +80,8 @@ export const GameHUD: React.FC<GameHUDProps> = ({ isMenuOpen, worldStats }) => {
                             toolHealth={stats.toolHealth}
                             hasCalibrated={hasCalibrated}
                             onCraft={(r) => bridge.call('craft', [JSON.stringify(r)])}
-                            onRepair={() => bridge.call('repairTool')}
-                            onUnlockCrafting={() => bridge.call('unlockCrafting')}
+                            onRepair={() => bridge.call('repairTool', [])}
+                            onUnlockCrafting={() => bridge.call('unlockCrafting', [])}
                         />
                     </div>
                     <CurrentToolDisplay

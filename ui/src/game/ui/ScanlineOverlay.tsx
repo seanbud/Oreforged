@@ -9,7 +9,7 @@ const ScanlineOverlay: React.FC = () => {
             width: '100%',
             height: '100%',
             pointerEvents: 'none',
-            zIndex: 50,
+            zIndex: 1,
             background: `
                 linear-gradient(
                     rgba(18, 16, 16, 0) 50%, 

@@ -5,6 +5,7 @@ import { GameLayout, GameLayer, HUDLayer } from './layouts/GameLayout';
 import { GameMenu } from './game/ui/menu/GameMenu';
 import { GameHUD } from './game/ui/GameHUD';
 import { RegenOverlay } from './game/ui/RegenOverlay';
+import ScanlineOverlay from './game/ui/ScanlineOverlay';
 import { useFacetState } from './engine/hooks';
 import { BlockType, ToolTier } from './game/data/GameDefinitions';
 
@@ -26,6 +27,16 @@ function App() {
     const inventory = useFacetState(Facets.Inventory);
     const [worldStats, setWorldStats] = useState<Partial<Record<BlockType, number>>>({});
 
+    // Shake Trigger Logic
+    const [shakeTrigger, setShakeTrigger] = useState(0);
+    const isToolBroken = stats.isToolBroken;
+
+    useEffect(() => {
+        if (isToolBroken) {
+            setShakeTrigger(Date.now());
+        }
+    }, [isToolBroken]);
+
     // Handle inputs
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -36,6 +47,14 @@ function App() {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
+
+    // Auto-close menu when generating
+    const isGenerating = useFacetState(Facets.IsGenerating);
+    useEffect(() => {
+        if (isGenerating) {
+            setIsMenuOpen(false);
+        }
+    }, [isGenerating]);
 
     // Initial Ready Call
     useEffect(() => {
@@ -57,10 +76,11 @@ function App() {
                         damageMultiplier={stats.damageMultiplier}
                         onResourceCollected={(type, count) => bridge.call('interact', [type, count])}
                         onWorldUpdate={setWorldStats}
-                        externalShakeTrigger={stats.isToolBroken ? Date.now() : 0} // Simple trigger
+                        externalShakeTrigger={shakeTrigger} // Use one-shot state
                         cameraResetTrigger={0}
                         inventory={inventory}
                     />
+                    <ScanlineOverlay />
                 </GameLayer>
 
                 <HUDLayer>

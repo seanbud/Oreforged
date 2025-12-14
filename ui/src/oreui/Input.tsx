@@ -2,11 +2,12 @@ import { Colors, Styles } from '../design/tokens';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label?: string;
+    containerStyle?: React.CSSProperties;
 }
 
-export const Input: React.FC<InputProps> = ({ label, style, ...props }) => {
+export const Input: React.FC<InputProps> = ({ label, style, containerStyle, ...props }) => {
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px', ...containerStyle }}>
             {label && (
                 <label style={{
                     fontSize: '14px',
@@ -30,6 +31,7 @@ export const Input: React.FC<InputProps> = ({ label, style, ...props }) => {
                     boxShadow: Styles.Shadows.Inset,
                     imageRendering: Styles.Font.Pixelated,
                     pointerEvents: 'auto',
+                    boxSizing: 'border-box',
                     ...style
                 }}
                 {...props}

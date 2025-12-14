@@ -59,6 +59,7 @@ struct GameState {
     int renderDistance = 12;
     long long tickCount = 0;
     bool isGenerating = false;
+    bool countWaterAsCurrency = true; // Default to true per request
     
     // Core Game Data
     std::map<int, int> inventory;
@@ -93,6 +94,7 @@ private:
     void TryRegenerate(const std::string& seedStr, bool autoRandomize);
     void UnlockCrafting();
     void ResetProgression();
+    void ToggleWaterCurrency(bool enabled);
 
     // Helpers
     void PushInventory();

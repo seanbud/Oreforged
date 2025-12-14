@@ -72,19 +72,19 @@ export const GameMenu: React.FC<GameMenuProps> = ({
                                 }}
                                 type="number"
                                 style={{ width: '100%' }}
+                                containerStyle={{ marginBottom: 0 }}
                             />
                         </div>
                         <Button
                             onClick={() => setSeedInput(Math.floor(Math.random() * 90000 + 10000).toString())}
                             style={{
-                                width: '32px',
-                                height: '32px',
+                                width: '40px',
+                                height: '40px',
                                 padding: 0,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontSize: '18px',
-                                marginLeft: '8px'
+                                fontSize: '18px'
                             }}
                         >↺</Button>
                     </div>
@@ -106,6 +106,9 @@ export const GameMenu: React.FC<GameMenuProps> = ({
 
                     <RegenButton seed={seedInput} autoRand={autoRand} />
                 </div>
+
+                {/* Visual / Gameplay Toggles - REMOVED per user request (Internal only) */}
+
                 {isUnlocked && (
                     <UpgradeSection />
                 )}
@@ -120,7 +123,7 @@ export const GameMenu: React.FC<GameMenuProps> = ({
 
                 <div style={{ display: 'flex', justifyContent: 'center', marginTop: '15px' }}>
                     <Button
-                        onClick={() => bridge.call('resetProgression')}
+                        onClick={() => bridge.call('resetProgression', [])}
                         variant="red"
                         style={{
                             fontSize: '10px',

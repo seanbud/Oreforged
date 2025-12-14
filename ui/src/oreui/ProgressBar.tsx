@@ -22,7 +22,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, label }) => 
                     width: `${Math.min(100, Math.max(0, progress))}%`,
                     height: '100%',
                     backgroundColor: Colors.Green.Base,
-                    transition: 'width 0.3s ease',
+                    transition: progress <= 0 ? 'none' : 'width 0.3s ease',
                     boxShadow: progress > 0 ? Styles.Shadows.Bevel(Colors.Green.BorderLight, Colors.Green.BorderDark) : 'none'
                 }} />
             </div>

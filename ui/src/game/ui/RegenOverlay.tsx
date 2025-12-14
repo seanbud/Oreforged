@@ -2,12 +2,11 @@ import React from 'react';
 import { Colors, Styles } from '../../design/tokens';
 import Panel from '../../oreui/Panel';
 import { ProgressBar } from '../../oreui/ProgressBar';
-import { remoteFacet, useFacetState } from '../../engine/hooks';
-
-const isGenerating = remoteFacet('is_generating', false);
+import { useFacetState } from '../../engine/hooks';
+import { Facets } from '../data/Facets';
 
 export const RegenOverlay: React.FC = () => {
-    const generating = useFacetState(isGenerating);
+    const generating = useFacetState(Facets.IsGenerating);
     const [progress, setProgress] = React.useState(0);
 
     // Visual simulation of progress when generating starts

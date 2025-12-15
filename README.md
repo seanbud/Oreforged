@@ -17,6 +17,8 @@
 
 https://github.com/user-attachments/assets/7910a1c7-e497-4409-aded-b7dbaa2b23cd
 
+https://github.com/user-attachments/assets/86ff46dd-155c-4097-b200-9c3648126003
+
 ## 🎯 Project Goals
 
 **OreForged** is a "made from scratch" engine experiment exploring:
@@ -24,7 +26,7 @@ https://github.com/user-attachments/assets/7910a1c7-e497-4409-aded-b7dbaa2b23cd
 1. **Facet Pattern UI**: Implementing Mojang's data-driven UI architecture (as seen in Bedrock Edition).
 2. **Decoupled Rendering**: A lightweight C++ game engine running separately from the visual layer.
 3. **Simple Gameplay**: A focused "Collect → Upgrade → Repeat" loop to test the architecture.
- 
+
 <p align="left">
   <img src="https://i.gyazo.com/d1b056037b992ac613ebb0ca22aae0ab.gif" alt="OreForged GIF" width="300">
 </p>

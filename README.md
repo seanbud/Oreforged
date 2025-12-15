@@ -15,6 +15,7 @@
 3. Extract the zip file.
 4. Run `OreForged.exe`.
 
+https://github.com/user-attachments/assets/7910a1c7-e497-4409-aded-b7dbaa2b23cd
 
 ## 🎯 Project Goals
 

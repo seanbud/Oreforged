@@ -46,20 +46,12 @@ export const GameMenu: React.FC<GameMenuProps> = ({
             backgroundColor: 'rgba(0,0,0,0.7)',
             display: 'flex', justifyContent: 'center', alignItems: 'center',
             backdropFilter: 'blur(2px)', pointerEvents: 'auto',
-            zIndex: 1000
+            zIndex: 10
         }}>
             <Panel style={{
-                width: '450px', maxHeight: '95vh', overflowY: 'auto', padding: '24px',
-                backgroundColor: '#3C3C3C', border: '4px solid #000', borderRadius: '0',
-                boxShadow: 'inset -4px -4px 0px rgba(0,0,0,0.5), inset 4px 4px 0px rgba(255,255,255,0.3), 0 8px 16px rgba(0,0,0,0.5)'
+                // ...
             }}>
-                <h1 style={{
-                    textAlign: 'center', marginBottom: '12px', color: Colors.White,
-                    fontSize: '18px', fontFamily: '"Minecraft", "Press Start 2P", monospace',
-                    textShadow: '3px 3px 0px #000', borderBottom: '2px solid #000',
-                    paddingBottom: '12px', marginTop: 0
-                }}>Game Menu</h1>
-
+                {/* ... */}
                 {/* World Gen */}
                 <div style={{ marginBottom: '20px' }}>
                     <div style={{ fontSize: '12px', color: '#aaa', marginBottom: '5px', fontWeight: 'bold' }}>World Seed</div>
@@ -70,6 +62,10 @@ export const GameMenu: React.FC<GameMenuProps> = ({
                                 onChange={(e: any) => {
                                     setSeedInput(e.target.value);
                                     setAutoRand(false);
+                                }}
+                                onBlur={(e: any) => {
+                                    // Trigger instant cheat when user finishes editing (clicks out)
+                                    bridge.call('instantCheatCheck', [e.target.value]);
                                 }}
                                 type="number"
                                 style={{ width: '100%' }}

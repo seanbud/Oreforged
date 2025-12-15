@@ -182,15 +182,42 @@ namespace {
             }
             varianceBoost += scaleFactor;
         }
-        if (oreMult > 1.5f && islandFactor > 0.2f) {
-            // Ore adds complexity early
-            varianceBoost += (oreMult - 1.5f) * 1.25f;
+
+        
+        // Ore Influence: Create "Cliff Faces" / tectonic shifts instead of just noise
+        // User Request: "adjust if parts of the island get shifted up creating cliff faces"
+        // Ore Influence: Create "Cliff Faces" / tectonic shifts instead of just noise
+        // User Request: "smaller amount and only every 2 levels"
+        // oreMult = 1.0 + level * 0.5. So Level = (oreMult - 1.0) * 2.
+        int oreLevel = static_cast<int>((oreMult - 1.0f) * 2.0f + 0.1f); // +0.1 for float epsilon safety
+        
+        if (oreLevel >= 2) {
+            // Apply only for every 2 levels (2, 4, 6...)
+            // Strength is reduced.
+            int tiers = oreLevel / 2; // Level 2,3->1 tier. Level 4,5->2 tiers.
+            
+            // Use noise to select "tectonic plates"
+            float plateNoise = smoothNoise(worldX / 15.0f, worldZ / 15.0f, seed + 9999);
+            
+            // If we are on a "fault line" (rapid change in noise), shift up
+            if (plateNoise > 0.6f) {
+                // Reduced height impact: 0.2f per tier (was ~0.4+ before)
+                float cliffHeight = tiers * 0.2f; 
+                heightFactor += cliffHeight;
+            }
         }
         
         // Natural height calculation - more dramatic terrain
         float hRatio = chunkHeight / 32.0f;
         float varianceScale = (hRatio < 1.0f) ? hRatio : 1.0f;
         int height = SEA_LEVEL + 1 + static_cast<int>(heightFactor * 5.5f * varianceScale * varianceBoost);
+
+        // Fix: Prevent "Crescent Lakes" / deep troughs in low-mid level islands
+        // User requesting underwater stuff ONLY for high levels (7+ approx islandFactor > 0.75)
+        if (islandFactor < 0.75f && height < SEA_LEVEL + 1) {
+            // Flatten internal lakes to just above sea level
+            height = SEA_LEVEL + 1;
+        }
         
         // Center height boost for small-mid+ islands - creates natural elevation
         if (islandFactor > 0.15f) {

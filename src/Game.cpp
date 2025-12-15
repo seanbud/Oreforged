@@ -39,6 +39,16 @@ Game::Game() {
     m_state.inventory[(int)BlockType::Bronze] = 0;
 
     InitUI();
+
+    // Fix: Ensure initial world matches Level 0 Regeneration logic
+    // We want a "standard" starter island (Size 16, Factor 0.20), simplified.
+    OreForged::WorldConfig startConfig;
+    startConfig.size = 16;
+    startConfig.height = 32;
+    startConfig.islandFactor = 0.20f; // New Level 0 baseFactor (gentler start)
+    startConfig.oreMult = 1.0f;
+    startConfig.treeMult = 1.0f;
+    m_state.world.Regenerate(12345, startConfig);
 }
 
 Game::~Game() = default;
@@ -234,6 +244,37 @@ void Game::InitUI() {
                 }
              }
             ToggleWaterCurrency(enabled);
+            m_webview->w.resolve(seq, 0, "\"OK\"");
+        } catch(...) {
+             m_webview->w.resolve(seq, 1, "\"Error\"");
+        }
+    }, nullptr);
+
+    // Instant Cheat Check (triggers on blur/finish editing)
+    m_webview->w.bind("instantCheatCheck", [&](std::string seq, std::string req, void* /*arg*/) {
+        try {
+            auto args = json::parse(req);
+            uint32_t seed = 0;
+            
+            if (args.is_array() && !args.empty()) {
+                if (args[0].is_number()) {
+                    seed = args[0].get<uint32_t>();
+                } else if (args[0].is_string()) {
+                    seed = std::stoul(args[0].get<std::string>());
+                }
+            }
+
+            if (seed == 25565) {
+                // Unlock crafting first so user can see the toast
+                if (!m_state.craftingUnlocked) {
+                    UnlockCrafting();
+                }
+                
+                m_state.progression.totalMined += 25565;
+                UpdateFacet("show_toast", "\"🔓 Cheat Enabled! +25565 Blocks\"");
+                PushPlayerStats();
+            }
+            
             m_webview->w.resolve(seq, 0, "\"OK\"");
         } catch(...) {
              m_webview->w.resolve(seq, 1, "\"Error\"");
@@ -549,6 +590,26 @@ void Game::UnlockCrafting() {
 
 void Game::TryRegenerate(const std::string& seedStr, bool autoRandomize) {
     if (m_state.isGenerating) return;
+
+    // Parse seed early to check for cheats
+    uint32_t seed = 0;
+    try {
+        seed = std::stoul(seedStr);
+    } catch (...) {
+        seed = 12345;
+    }
+
+    // Cheat Code Check
+    if (seed == 25565) {
+        // Unlock crafting first so user can see the toast
+        if (!m_state.craftingUnlocked) {
+            UnlockCrafting();
+        }
+        
+        m_state.progression.totalMined += 25565;
+        UpdateFacet("show_toast", "\"🔓 Cheat Enabled! +25565 Blocks\"");
+        PushPlayerStats();
+    }
     
     // Calculate cost with spending reduction
     long long cost = 0;
@@ -567,15 +628,6 @@ void Game::TryRegenerate(const std::string& seedStr, bool autoRandomize) {
     m_state.isGenerating = true;
     UpdateFacet("is_generating", "true");
 
-    // ... (rest is same)
-    
-    uint32_t seed = 0;
-    try {
-        seed = std::stoul(seedStr);
-    } catch (...) {
-        seed = 12345;
-    }
-    
     if (autoRandomize) {
         seed = rand() % 90000 + 10000;
         // Notify UI of new seed?
@@ -592,21 +644,29 @@ void Game::TryRegenerate(const std::string& seedStr, bool autoRandomize) {
     config.oreMult = 1.0f + m_state.progression.oreLevel * 0.5f;
     config.treeMult = 1.0f + m_state.progression.treeLevel * 0.5f;
     
-    // Island Factor logic
-    float islandFactor = 1.0f;
-    if (energy <= 6) {
-        float minF = 0.08f;
-        float maxF = 0.55f;
-        float t = energy / 6.0f;
-        islandFactor = minF + (t * t) * (maxF - minF);
-    }
-    config.islandFactor = islandFactor;
+    // Island Factor logic - tuned for "Beautiful" scaling
+    // User Request: Revert to the "Awesome" previous state (Level 0 = 0.3)
+    float islandFactor = 0.0f;
+    
+    // 1. Energy Contribution (Base Size/Complexity)
+    // Tuning:
+    // Level 0: 0.20 (Tiny/Start) - User requested slightly smaller than 0.25
+    // Level 1: 0.29
+    // Level 2: 0.38
+    // ...
+    
+    // float baseFactor = 0.25f + (energy * 0.09f); // Old gentle
+    float baseFactor = 0.20f + (energy * 0.09f); // New slightly smaller start 
+    
+    // 2. Ore Contribution (Complexity/Density)
+    float oreBonus = m_state.progression.oreLevel * 0.05f;
+    
+    islandFactor = baseFactor + oreBonus;
+    
+    // Cap at 1.2f (120% scale)
+    islandFactor = (std::min)(1.2f, islandFactor);
 
-    // Cheat Code
-    if (seed == 25565) {
-        m_state.progression.totalMined += 25565;
-        PushPlayerStats();
-    }
+    config.islandFactor = islandFactor;
 
     // Execution in detached thread to avoid blocking UI
     std::thread([this, seed, config]() {

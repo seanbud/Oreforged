@@ -33,7 +33,7 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({ message, o
                 fontFamily: '"Minecraft", "Press Start 2P", monospace',
                 textAlign: 'center',
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
-                zIndex: 200,
+                zIndex: 20,
                 pointerEvents: 'none',
                 animation: 'toastSlideInFade 3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
                 border: '2px solid rgba(255, 255, 255, 0.2)',

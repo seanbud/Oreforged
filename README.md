@@ -17,8 +17,6 @@
 
 https://github.com/user-attachments/assets/7910a1c7-e497-4409-aded-b7dbaa2b23cd
 
-https://github.com/user-attachments/assets/86ff46dd-155c-4097-b200-9c3648126003
-
 ## 🎯 Project Goals
 
 **OreForged** is a "made from scratch" engine experiment exploring:
@@ -177,6 +175,10 @@ OreForged includes a complete set of Minecraft-styled UI components:
 -   **Slider**: Range control with live updates
 
 All components support the OreUI Facet pattern for maximum performance.
+
+## Prototype
+
+https://github.com/user-attachments/assets/86ff46dd-155c-4097-b200-9c3648126003
 
 ## 🤝 Contributing
 
